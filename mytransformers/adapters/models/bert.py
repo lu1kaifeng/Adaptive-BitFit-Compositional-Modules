@@ -144,6 +144,15 @@ class BertModelAdaptersMixin(InvertibleAdaptersMixin, ModelAdaptersMixin):
 
         return return_adapters
 
+    def get_adapter_list(self):
+        final_list = []
+        for i, layer in enumerate(self.encoder.layer):
+            final_list.append({
+                "attention": layer.attention.output.adapters,
+                "output": layer.output.adapters,
+            })
+        return final_list
+
 
 class BertModelHeadsMixin(ModelWithFlexibleHeadsAdaptersMixin):
     """

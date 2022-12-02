@@ -40,7 +40,7 @@ FINAL_SAVE_NAME = 'model-finish'
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--adam_epsilon", default=1e-4, type=float)
+    parser.add_argument("--l2", default=1e-5, type=float)
 
     parser.add_argument("--add_task_tokens", action="store_true")
     parser.add_argument("--use_eos_as_sos", action="store_true")
@@ -70,7 +70,7 @@ def parse_args():
     parser.add_argument("--n_train_epochs", type=int, default=15)
     parser.add_argument("--dynamic_epochs", action="store_true")
     parser.add_argument("--n_warmup_ratio", type=float, default=0.005)
-    parser.add_argument("--n_workers", type=int, default=4)
+    parser.add_argument("--n_workers", type=int, default=0)
     parser.add_argument("--use_sep", action="store_true")
     parser.add_argument("--reg_lambda", type=float, default=1.)
     parser.add_argument("--seed", type=int, default=42)
@@ -83,7 +83,7 @@ def parse_args():
     parser.add_argument("--ref1", action="store_true")
     parser.add_argument("--multitask_specific", action="store_true")
     parser.add_argument("--seq_train_type", type=str, default="lll", choices=["lll","llewc","finetune","multitask","mas","ewc","gem","multilm"])
-    parser.add_argument("--tasks", nargs='+', default=["squad2"])
+    parser.add_argument("--tasks", nargs='+', default=["squad1","sst"])
     parser.add_argument("--skip_tasks", nargs='+')
     parser.add_argument("--temperature_kd", type=float, default=2.0)
     parser.add_argument("--temperature_lm", type=float, default=1.0)
@@ -230,7 +230,7 @@ def parse_args():
                                        args.seq_train_type, "{}_{}_{}_{}".format(args.id, "_".join(args.tasks), args.gen_lm_sample_percentage, args.seed) if "lll" in args.seq_train_type or "finetune" in args.seq_train_type or "llewc" in args.seq_train_type else "_".join(args.tasks)+"_seed_%d"%args.seed)
     logger.info("DIR ROOT CHANGED! {}".format(args.model_dir_root))
 
-    args.device_ids = GPUtil.getAvailable(maxLoad=0.05, maxMemory=0.05, limit=args.n_gpus)
+    args.device_ids = GPUtil.getAvailable( limit=args.n_gpus)
     if len(args.device_ids) == 0:
         logger.error('No available GPUs!')
         raise NotImplementedError("No CPU mode available!")
@@ -415,7 +415,7 @@ TASK_DICT = {
     },
     "sst": {
                "train":os.path.join(args.data_dir,"sst_to_squad-train-v2.0.json"),
-               "eval":os.path.join(args.data_dir,"sst_to_squad-dev-v2.0.json"),
+               "eval":os.path.join(args.data_dir,"sst_to_squad-test-v2.0.json"),
                "test":os.path.join(args.data_dir,"sst_to_squad-test-v2.0.json"),
                "n_train_epochs": args.n_train_epochs 
     },

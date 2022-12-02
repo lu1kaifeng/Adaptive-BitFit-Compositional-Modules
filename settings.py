@@ -335,8 +335,8 @@ TASK_DICT = {
     },
     "squad1": {
                "train":os.path.join(args.data_dir,"squad-train-v1.1.json"),
-               "eval":os.path.join(args.data_dir,"squad-dev-v1.1.json"),
-               "test":os.path.join(args.data_dir,"squad-dev-v1.1.json"),
+               "eval":os.path.join(args.data_dir,"squad-dev-v2.0.json"),
+               "test":os.path.join(args.data_dir,"squad-dev-v2.0.json"),
                "n_train_epochs": args.n_train_epochs 
     },
     "squad2": {

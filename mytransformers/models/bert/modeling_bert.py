@@ -859,7 +859,8 @@ class BertModel(BertModelAdaptersMixin, BertPreTrainedModel):
     """
 
     def __init__(self, config, add_pooling_layer=True):
-        super().__init__(config)
+        BertPreTrainedModel.__init__(self,config)
+        BertModelAdaptersMixin.__init__(self,config)
         self.config = config
 
         self.embeddings = BertEmbeddings(config)

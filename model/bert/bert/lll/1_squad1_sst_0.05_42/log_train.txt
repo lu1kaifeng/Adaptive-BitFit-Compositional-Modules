@@ -1,0 +1,317 @@
+2022-12-02 12:59:17,277 - 0:00:02 - 0.0s - INFO - __main__ - args = Namespace(LOSS_alpha=1.0, adapt_type='houlsby', adapterdrop=False, add_task_tokens=False, alpha_b=0.0, alpha_dropout=0.0, alpha_init=0.001, alpha_temp=1e-08, block_first_meta=False, clear_model=False, constant_sch=False, data_dir='./data', debug=False, decay_style='linear', device_ids=[0], distil=False, dump=False, dynamic_epochs=False, entropy_coe=0.01, extra_e2e=False, fake_mix_debug=False, first_half_is_old=False, first_only=False, fit_epoch=0, fp32=True, gen_lm_sample_percentage=0.05, generate_after=False, glances=[1, 1, 1, 1, 1], grad_clip_norm=1.0, grad_coe=[1.0, 1.0], grad_ob=False, gradient_block=False, gradient_debug=False, half_assert=False, id=1, imp_p=0.9, l2=1e-05, lamaml=False, last_dim_coe=0.0, last_half_is_whole=False, layer_debug=False, layer_debug_cnt=-1, learn_lr=False, learn_lr_with_nomul=False, learning_rate=0.0001, lm_lambda=0.25, load_model_for_stage=False, load_old=False, logging_steps=10, lr_epoch=1, lr_grad_norm=1.0, lr_schedule='warmup_linear', maml_qalm=False, mask_neg=False, mask_pos=False, max_grad_norm=1, max_len=502, max_n_epochs=100, memory_sizes=[24576.0], meta_block_emb=False, meta_last=False, mid_dim=256, min_batch_size=4, min_n_steps=1500, mix_ini=0.2, mix_loss_coe=1.0, mix_loss_norm=False, model_dir_root='./model/bert\\bert\\lll\\1_squad1_sst_0.05_42', model_name='bert', mom=0.1, multitask_specific=False, n_gpus=1, n_train_epochs={'squad1': 15, 'sst': 15}, n_warmup_ratio=0.005, n_workers=0, no_refresh=False, no_repara=False, observe_type=1, opt_lr=0.001, opt_wt=0.001, partial_learn=False, partial_transfer=False, ppl_thr=100.0, pre_learning_rate=0.0001, pre_start_from='None', pre_warmup_step=100, prefix_dropout=0.0, preseqlen=10, pretrain_adapter=False, pretrained_prefix='None', pretraining=False, pseudo_ablation=False, qa_theta=1.0, qp_margin=0.5, random_batch=False, random_first=False, random_replay_batch=False, real_sample=False, ref1=False, reg_lambda=1.0, rep_beta=0.1, replay_first=False, return_m_grads=False, rev_gradient=False, round_robin=False, same_pass=False, second_order=False, seed=42, select_temp=1.0, seq_distil=False, seq_train_type='lll', set_p_drop=[0, 1, 0], single_alpha=False, skip_tasks=None, smooth=False, sync_dropout=False, sync_update=False, tanh_trans=False, task_test=[1, 2, 3, 4, 5], tasks=['squad1', 'sst'], temperature_kd=2.0, temperature_lm=1.0, temperature_qa=1.0, test_all=False, test_batch_size=32, test_skip=0, test_training_set=False, thr=[0, 0, 0, 0, 0], tokens_weight=5, top_k_lm=20, top_k_qa=20, top_p_lm=0.0, top_p_qa=0.0, top_two=False, train_batch_size=32, unbound=0, upsample_data=None, use_autoM=False, use_eos_as_sos=False, use_momentum=False, use_sep=False, warm_mix_step=1, weight_decay=0.01, whole_mix_step=6, whole_optim=False, wt_op=[True, False, False, True], z_debug=False, z_debug_dir='None', z_debug_model='None', z_debug_noshuff=False, z_debug_start_from_trans=False, z_debug_tsk_num=0, z_learning_rate=0.001, z_max_batch_size=32, z_step=300, z_train_epochs=[100, 100, 100, 100, 100], z_train_lrs=[1e-05], z_warmup_step=1000)
+2022-12-02 12:59:17,277 - 0:00:02 - 0.0s - INFO - __main__ - start to transfer { task: ['squad1'], seq train type: lll }
+2022-12-02 12:59:17,277 - 0:00:02 - 0.0s - INFO - __main__ - extra training data size: 0
+2022-12-02 12:59:22,930 - 0:00:08 - 5.7s - INFO - __main__ - Para requries gradient...
+2022-12-02 12:59:22,930 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.0.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,930 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.0.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,930 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.0.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,930 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.0.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,931 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.0.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,931 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.0.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,931 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.0.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,931 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.0.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,931 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.1.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,931 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.1.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,931 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.1.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,931 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.1.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,931 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.1.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,931 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.1.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,932 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.1.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,932 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.1.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,932 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.2.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,932 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.2.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,932 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.2.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,932 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.2.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,932 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.2.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,932 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.2.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,932 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.2.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,932 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.2.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,932 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.3.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,933 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.3.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,933 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.3.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,933 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.3.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,933 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.3.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,933 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.3.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,933 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.3.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,933 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.3.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,933 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.4.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,933 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.4.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,933 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.4.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,933 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.4.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.4.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.4.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.4.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.4.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.5.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.5.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.5.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.5.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.5.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.5.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.5.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,934 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.5.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,935 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.6.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,935 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.6.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,935 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.6.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,935 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.6.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,935 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.6.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,935 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.6.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,935 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.6.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,935 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.6.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,935 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.7.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,935 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.7.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,936 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.7.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,936 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.7.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,936 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.7.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,936 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.7.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,936 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.7.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,936 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.7.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,936 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.8.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,936 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.8.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,936 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.8.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,936 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.8.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,936 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.8.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,937 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.8.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,937 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.8.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,937 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.8.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,937 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.9.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,937 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.9.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,937 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.9.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,937 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.9.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,937 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.9.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,937 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.9.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,937 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.9.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,937 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.9.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,938 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.10.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,938 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.10.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,938 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.10.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,938 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.10.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,938 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.10.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,938 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.10.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,938 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.10.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,938 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.10.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,938 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.11.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,938 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.11.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,939 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.11.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,939 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.11.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,939 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.11.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,939 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.11.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,939 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.11.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,939 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.11.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,939 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.12.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,939 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.12.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,939 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.12.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,940 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.12.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,940 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.12.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,940 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.12.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,940 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.12.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,940 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.12.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,940 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.13.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,940 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.13.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,941 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.13.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,941 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.13.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,941 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.13.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,941 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.13.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,941 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.13.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,941 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.13.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,941 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.14.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,941 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.14.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,941 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.14.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,941 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.14.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,942 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.14.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,942 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.14.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,942 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.14.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,942 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.14.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,942 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.15.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,942 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.15.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,942 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.15.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,942 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.15.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,942 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.15.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,942 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.15.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,943 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.15.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,943 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.15.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,943 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.16.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,943 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.16.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,943 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.16.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,943 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.16.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,943 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.16.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,943 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.16.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,943 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.16.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,943 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.16.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,944 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.17.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,944 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.17.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,944 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.17.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,944 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.17.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,944 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.17.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,944 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.17.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,944 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.17.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,944 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.17.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,944 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.18.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,944 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.18.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,945 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.18.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,945 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.18.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,945 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.18.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,945 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.18.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,945 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.18.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,945 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.18.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,945 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.19.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,945 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.19.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,945 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.19.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,945 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.19.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,946 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.19.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,946 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.19.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,946 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.19.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,946 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.19.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,946 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.20.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,946 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.20.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,946 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.20.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,946 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.20.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,946 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.20.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,946 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.20.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,946 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.20.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,947 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.20.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,947 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.21.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,947 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.21.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,947 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.21.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,947 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.21.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,947 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.21.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,947 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.21.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,947 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.21.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,947 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.21.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,947 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.22.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,948 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.22.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,948 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.22.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,948 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.22.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,948 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.22.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,948 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.22.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,948 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.22.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,948 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.22.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,948 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.23.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,948 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.23.attention.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,948 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.23.attention.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,948 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.23.attention.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.23.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.23.output.adapters.0.adapter_down.0.bias
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.23.output.adapters.0.adapter_up.weight
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - PreModel.encoder.layer.23.output.adapters.0.adapter_up.bias
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - trigger_embed.weight
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - argument_embed.weight
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - position_embed.weight
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - tri_fc1.1.weight
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - tri_fc1.1.bias
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - tri_CRF1.transitions
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - whole Number of learned parameter: 6.44M
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - whole Number of else parameter: 355.36M
+2022-12-02 12:59:22,949 - 0:00:08 - 0.0s - INFO - __main__ - whole Ratio: 1.0181230551315172
+2022-12-02 12:59:22,980 - 0:00:08 - 0.0s - WARNING - __main__ - Transfer, using extra data now...
+2022-12-02 12:59:25,668 - 0:00:11 - 2.7s - INFO - __main__ - len of train dataset: 14616 , max train batch size 32 , num of opt steps: 1461600
+2022-12-02 12:59:25,669 - 0:00:11 - 0.0s - INFO - __main__ - name group
+2022-12-02 12:59:25,669 - 0:00:11 - 0.0s - INFO - __main__ - [['PreModel.encoder.layer.0.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.0.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.0.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.0.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.1.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.1.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.1.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.1.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.2.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.2.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.2.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.2.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.3.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.3.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.3.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.3.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.4.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.4.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.4.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.4.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.5.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.5.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.5.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.5.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.6.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.6.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.6.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.6.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.7.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.7.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.7.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.7.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.8.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.8.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.8.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.8.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.9.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.9.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.9.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.9.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.10.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.10.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.10.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.10.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.11.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.11.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.11.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.11.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.12.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.12.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.12.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.12.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.13.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.13.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.13.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.13.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.14.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.14.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.14.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.14.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.15.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.15.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.15.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.15.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.16.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.16.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.16.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.16.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.17.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.17.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.17.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.17.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.18.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.18.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.18.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.18.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.19.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.19.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.19.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.19.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.20.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.20.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.20.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.20.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.21.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.21.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.21.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.21.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.22.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.22.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.22.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.22.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.23.attention.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.23.attention.output.adapters.0.adapter_up.weight', 'PreModel.encoder.layer.23.output.adapters.0.adapter_down.0.weight', 'PreModel.encoder.layer.23.output.adapters.0.adapter_up.weight', 'trigger_embed.weight', 'argument_embed.weight', 'position_embed.weight', 'tri_fc1.1.weight', 'tri_CRF1.transitions'], ['PreModel.encoder.layer.0.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.0.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.0.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.0.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.1.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.1.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.1.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.1.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.2.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.2.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.2.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.2.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.3.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.3.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.3.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.3.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.4.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.4.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.4.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.4.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.5.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.5.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.5.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.5.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.6.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.6.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.6.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.6.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.7.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.7.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.7.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.7.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.8.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.8.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.8.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.8.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.9.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.9.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.9.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.9.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.10.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.10.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.10.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.10.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.11.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.11.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.11.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.11.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.12.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.12.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.12.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.12.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.13.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.13.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.13.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.13.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.14.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.14.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.14.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.14.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.15.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.15.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.15.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.15.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.16.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.16.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.16.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.16.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.17.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.17.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.17.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.17.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.18.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.18.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.18.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.18.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.19.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.19.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.19.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.19.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.20.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.20.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.20.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.20.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.21.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.21.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.21.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.21.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.22.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.22.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.22.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.22.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.23.attention.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.23.attention.output.adapters.0.adapter_up.bias', 'PreModel.encoder.layer.23.output.adapters.0.adapter_down.0.bias', 'PreModel.encoder.layer.23.output.adapters.0.adapter_up.bias', 'tri_fc1.1.bias']]
+2022-12-02 12:59:25,671 - 0:00:11 - 0.0s - INFO - __main__ - Start to use Annealling scheduler!
+2022-12-02 12:59:25,671 - 0:00:11 - 0.0s - INFO - __main__ - Epoch 0
+2022-12-02 12:59:25,673 - 0:00:11 - 0.0s - INFO - __main__ - Print para
+2022-12-02 12:59:25,673 - 0:00:11 - 0.0s - INFO - __main__ - encoder.layer.0.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 12:59:25,673 - 0:00:11 - 0.0s - INFO - __main__ - Parameter containing:
+tensor([[ 0.0086,  0.0009, -0.0166,  ..., -0.0068,  0.0275,  0.0060],
+        [ 0.0333, -0.0182,  0.0234,  ...,  0.0582,  0.0020,  0.0152],
+        [-0.0254,  0.0068,  0.0056,  ...,  0.0068, -0.0075,  0.0201],
+        ...,
+        [ 0.0271,  0.0422,  0.0125,  ...,  0.0080,  0.0287, -0.0167],
+        [ 0.0199, -0.0016, -0.0403,  ...,  0.0115,  0.0061,  0.0126],
+        [-0.0191, -0.0136, -0.0227,  ...,  0.0087, -0.0125, -0.0223]],
+       device='cuda:0', requires_grad=True)
+2022-12-02 12:59:26,503 - 0:00:11 - 0.8s - INFO - __main__ - [No Events Detected]step: 0, loss: 2552.342 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 12:59:29,332 - 0:00:14 - 2.8s - INFO - __main__ - [No Events Detected]step: 10, loss: 2361.254 [trigger] P=0.001  R=0.014  F1=0.001
+2022-12-02 12:59:32,455 - 0:00:17 - 3.1s - INFO - __main__ - [No Events Detected]step: 20, loss: 2778.314 [trigger] P=0.001  R=0.021  F1=0.002
+2022-12-02 12:59:35,635 - 0:00:21 - 3.2s - INFO - __main__ - [No Events Detected]step: 30, loss: 2896.825 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 12:59:38,994 - 0:00:24 - 3.4s - INFO - __main__ - [No Events Detected]step: 40, loss: 2332.317 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 12:59:42,148 - 0:00:27 - 3.2s - INFO - __main__ - [No Events Detected]step: 50, loss: 2641.054 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 12:59:45,136 - 0:00:30 - 3.0s - INFO - __main__ - [No Events Detected]step: 60, loss: 2718.730 [trigger] P=0.001  R=0.014  F1=0.001
+2022-12-02 12:59:47,955 - 0:00:33 - 2.8s - INFO - __main__ - [No Events Detected]step: 70, loss: 2545.706 [trigger] P=0.001  R=0.015  F1=0.002
+2022-12-02 12:59:51,128 - 0:00:36 - 3.2s - INFO - __main__ - [No Events Detected]step: 80, loss: 2273.809 [trigger] P=0.000  R=0.006  F1=0.001
+2022-12-02 12:59:54,230 - 0:00:39 - 3.1s - INFO - __main__ - [No Events Detected]step: 90, loss: 2547.248 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 12:59:57,275 - 0:00:42 - 3.0s - INFO - __main__ - [No Events Detected]step: 100, loss: 1997.148 [trigger] P=0.001  R=0.014  F1=0.002
+2022-12-02 13:00:00,388 - 0:00:45 - 3.1s - INFO - __main__ - [No Events Detected]step: 110, loss: 2011.469 [trigger] P=0.002  R=0.020  F1=0.004
+2022-12-02 13:00:03,566 - 0:00:48 - 3.2s - INFO - __main__ - [No Events Detected]step: 120, loss: 2249.716 [trigger] P=0.003  R=0.019  F1=0.005
+2022-12-02 13:00:06,540 - 0:00:51 - 3.0s - INFO - __main__ - [No Events Detected]step: 130, loss: 1521.344 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:09,906 - 0:00:55 - 3.4s - INFO - __main__ - [No Events Detected]step: 140, loss: 1939.799 [trigger] P=0.007  R=0.015  F1=0.009
+2022-12-02 13:00:13,100 - 0:00:58 - 3.2s - INFO - __main__ - [No Events Detected]step: 150, loss: 1456.719 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:15,728 - 0:01:01 - 2.6s - INFO - __main__ - [No Events Detected]step: 160, loss: 1731.971 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:18,923 - 0:01:04 - 3.2s - INFO - __main__ - [No Events Detected]step: 170, loss: 1658.880 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:22,406 - 0:01:07 - 3.5s - INFO - __main__ - [No Events Detected]step: 180, loss: 1347.724 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:25,664 - 0:01:11 - 3.3s - INFO - __main__ - [No Events Detected]step: 190, loss: 736.883 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:28,940 - 0:01:14 - 3.3s - INFO - __main__ - [No Events Detected]step: 200, loss: 641.798 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:31,859 - 0:01:17 - 2.9s - INFO - __main__ - [No Events Detected]step: 210, loss: 762.258 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:35,010 - 0:01:20 - 3.2s - INFO - __main__ - [No Events Detected]step: 220, loss: 630.493 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:38,633 - 0:01:24 - 3.6s - INFO - __main__ - [No Events Detected]step: 230, loss: 539.526 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:41,672 - 0:01:27 - 3.0s - INFO - __main__ - [No Events Detected]step: 240, loss: 359.190 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:44,804 - 0:01:30 - 3.1s - INFO - __main__ - [No Events Detected]step: 250, loss: 432.054 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:47,696 - 0:01:33 - 2.9s - INFO - __main__ - [No Events Detected]step: 260, loss: 384.207 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:50,965 - 0:01:36 - 3.3s - INFO - __main__ - [No Events Detected]step: 270, loss: 415.602 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:54,443 - 0:01:39 - 3.5s - INFO - __main__ - [No Events Detected]step: 280, loss: 352.780 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:00:57,677 - 0:01:43 - 3.2s - INFO - __main__ - [No Events Detected]step: 290, loss: 355.112 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:01,002 - 0:01:46 - 3.3s - INFO - __main__ - [No Events Detected]step: 300, loss: 358.674 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:04,423 - 0:01:49 - 3.4s - INFO - __main__ - [No Events Detected]step: 310, loss: 228.382 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:07,189 - 0:01:52 - 2.8s - INFO - __main__ - [No Events Detected]step: 320, loss: 202.531 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:10,769 - 0:01:56 - 3.6s - INFO - __main__ - [No Events Detected]step: 330, loss: 239.670 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:14,059 - 0:01:59 - 3.3s - INFO - __main__ - [No Events Detected]step: 340, loss: 270.528 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:17,157 - 0:02:02 - 3.1s - INFO - __main__ - [No Events Detected]step: 350, loss: 221.807 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:20,131 - 0:02:05 - 3.0s - INFO - __main__ - [No Events Detected]step: 360, loss: 236.133 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:23,476 - 0:02:08 - 3.3s - INFO - __main__ - [No Events Detected]step: 370, loss: 139.225 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:26,575 - 0:02:11 - 3.1s - INFO - __main__ - [No Events Detected]step: 380, loss: 198.000 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:29,556 - 0:02:14 - 3.0s - INFO - __main__ - [No Events Detected]step: 390, loss: 194.595 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:32,764 - 0:02:18 - 3.2s - INFO - __main__ - [No Events Detected]step: 400, loss: 174.254 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:35,603 - 0:02:20 - 2.8s - INFO - __main__ - [No Events Detected]step: 410, loss: 249.261 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:38,948 - 0:02:24 - 3.3s - INFO - __main__ - [No Events Detected]step: 420, loss: 138.182 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:42,284 - 0:02:27 - 3.3s - INFO - __main__ - [No Events Detected]step: 430, loss: 135.344 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:45,613 - 0:02:30 - 3.3s - INFO - __main__ - [No Events Detected]step: 440, loss: 221.135 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:48,631 - 0:02:34 - 3.0s - INFO - __main__ - [No Events Detected]step: 450, loss: 137.034 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:55,156 - 0:02:40 - 6.5s - INFO - __main__ - valid loss: 221.96695382254464
+2022-12-02 13:01:55,156 - 0:02:40 - 0.0s - INFO - __main__ - Print para
+2022-12-02 13:01:55,156 - 0:02:40 - 0.0s - INFO - __main__ - encoder.layer.0.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 13:01:55,156 - 0:02:40 - 0.0s - INFO - __main__ - Parameter containing:
+tensor([[ 0.0089,  0.0006, -0.0166,  ..., -0.0070,  0.0270,  0.0062],
+        [ 0.0330, -0.0179,  0.0236,  ...,  0.0582,  0.0021,  0.0150],
+        [-0.0257,  0.0070,  0.0053,  ...,  0.0068, -0.0070,  0.0199],
+        ...,
+        [ 0.0271,  0.0423,  0.0122,  ...,  0.0076,  0.0288, -0.0166],
+        [ 0.0192, -0.0011, -0.0404,  ...,  0.0113,  0.0063,  0.0126],
+        [-0.0190, -0.0132, -0.0228,  ...,  0.0088, -0.0121, -0.0224]],
+       device='cuda:0', requires_grad=True)
+2022-12-02 13:01:55,168 - 0:02:40 - 0.0s - INFO - __main__ - Epoch 1
+2022-12-02 13:01:55,170 - 0:02:40 - 0.0s - INFO - __main__ - Print para
+2022-12-02 13:01:55,170 - 0:02:40 - 0.0s - INFO - __main__ - encoder.layer.0.attention.output.adapters.0.adapter_down.0.weight
+2022-12-02 13:01:55,170 - 0:02:40 - 0.0s - INFO - __main__ - Parameter containing:
+tensor([[ 0.0089,  0.0006, -0.0166,  ..., -0.0070,  0.0270,  0.0062],
+        [ 0.0330, -0.0179,  0.0236,  ...,  0.0582,  0.0021,  0.0150],
+        [-0.0257,  0.0070,  0.0053,  ...,  0.0068, -0.0070,  0.0199],
+        ...,
+        [ 0.0271,  0.0423,  0.0122,  ...,  0.0076,  0.0288, -0.0166],
+        [ 0.0192, -0.0011, -0.0404,  ...,  0.0113,  0.0063,  0.0126],
+        [-0.0190, -0.0132, -0.0228,  ...,  0.0088, -0.0121, -0.0224]],
+       device='cuda:0', requires_grad=True)
+2022-12-02 13:01:55,517 - 0:02:40 - 0.3s - INFO - __main__ - [No Events Detected]step: 0, loss: 167.913 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:01:58,739 - 0:02:44 - 3.2s - INFO - __main__ - [No Events Detected]step: 10, loss: 134.312 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:01,863 - 0:02:47 - 3.1s - INFO - __main__ - [No Events Detected]step: 20, loss: 110.977 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:05,152 - 0:02:50 - 3.3s - INFO - __main__ - [No Events Detected]step: 30, loss: 134.624 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:08,075 - 0:02:53 - 2.9s - INFO - __main__ - [No Events Detected]step: 40, loss: 125.483 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:11,047 - 0:02:56 - 3.0s - INFO - __main__ - [No Events Detected]step: 50, loss: 135.539 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:14,441 - 0:02:59 - 3.4s - INFO - __main__ - [No Events Detected]step: 60, loss: 154.493 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:17,782 - 0:03:03 - 3.3s - INFO - __main__ - [No Events Detected]step: 70, loss: 237.645 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:20,998 - 0:03:06 - 3.2s - INFO - __main__ - [No Events Detected]step: 80, loss: 131.723 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:24,217 - 0:03:09 - 3.2s - INFO - __main__ - [No Events Detected]step: 90, loss: 134.352 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:27,286 - 0:03:12 - 3.1s - INFO - __main__ - [No Events Detected]step: 100, loss: 92.943 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:30,011 - 0:03:15 - 2.7s - INFO - __main__ - [No Events Detected]step: 110, loss: 149.361 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:33,204 - 0:03:18 - 3.2s - INFO - __main__ - [No Events Detected]step: 120, loss: 132.298 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:36,299 - 0:03:21 - 3.1s - INFO - __main__ - [No Events Detected]step: 130, loss: 124.667 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:39,926 - 0:03:25 - 3.6s - INFO - __main__ - [No Events Detected]step: 140, loss: 142.078 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:43,719 - 0:03:29 - 3.8s - INFO - __main__ - [No Events Detected]step: 150, loss: 130.926 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:47,019 - 0:03:32 - 3.3s - INFO - __main__ - [No Events Detected]step: 160, loss: 85.933 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:50,032 - 0:03:35 - 3.0s - INFO - __main__ - [No Events Detected]step: 170, loss: 79.392 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:52,893 - 0:03:38 - 2.9s - INFO - __main__ - [No Events Detected]step: 180, loss: 118.443 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:56,302 - 0:03:41 - 3.4s - INFO - __main__ - [No Events Detected]step: 190, loss: 82.056 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:02:59,757 - 0:03:45 - 3.5s - INFO - __main__ - [No Events Detected]step: 200, loss: 106.485 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:03:03,248 - 0:03:48 - 3.5s - INFO - __main__ - [No Events Detected]step: 210, loss: 157.456 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:03:06,461 - 0:03:51 - 3.2s - INFO - __main__ - [No Events Detected]step: 220, loss: 163.266 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:03:09,930 - 0:03:55 - 3.5s - INFO - __main__ - [No Events Detected]step: 230, loss: 91.869 [trigger] P=0.000  R=0.000  F1=0.000
+2022-12-02 13:03:13,039 - 0:03:58 - 3.1s - INFO - __main__ - [No Events Detected]step: 240, loss: 104.047 [trigger] P=0.000  R=0.000  F1=0.000

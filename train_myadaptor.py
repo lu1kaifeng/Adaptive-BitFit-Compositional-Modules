@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 from torch import nn
-from mytransformers import AdamW, WEIGHTS_NAME, HoulsbyConfig, get_constant_schedule_with_warmup
+from mytransformers import AdamW, WEIGHTS_NAME, get_constant_schedule_with_warmup
 import csv
 import random
 import numpy as np

@@ -345,12 +345,12 @@ class AdapterLayerBaseMixin(ABC):
         """
         # print(input_tensor)
         adapter_setup = self.config.adapters.active_setup if hasattr(self.config, "adapters") else None
-        print(adapter_setup)
+        #print(adapter_setup)
         # print(self.layer_norm)
         skip_adapters = adapter_setup is None or (
             self.config.adapters.skip_layers is not None and self.layer_idx in self.config.adapters.skip_layers
         )
-        print(skip_adapters)
+        #print(skip_adapters)
         if not skip_adapters and (len(set(self.adapters.keys()) & adapter_setup.flatten()) > 0):
             if isinstance(adapter_setup, Stack):
                 # print("Stack at layer {}".format(self.layer_idx))
