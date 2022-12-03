@@ -85,7 +85,7 @@ def parse_args():
     parser.add_argument("--ref1", action="store_true")
     parser.add_argument("--multitask_specific", action="store_true")
     parser.add_argument("--seq_train_type", type=str, default="lll", choices=["lll","llewc","finetune","multitask","mas","ewc","gem","multilm"])
-    parser.add_argument("--tasks", nargs='+', default=["squad1","sst"])
+    parser.add_argument("--tasks", nargs='+', default=['bc','bn','cts','nw','un','wl'])
     parser.add_argument("--skip_tasks", nargs='+')
     parser.add_argument("--temperature_kd", type=float, default=2.0)
     parser.add_argument("--temperature_lm", type=float, default=1.0)

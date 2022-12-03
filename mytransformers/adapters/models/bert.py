@@ -1,6 +1,7 @@
 import logging
 from typing import Union
 
+import numpy as np
 import torch
 
 from ..composition import AdapterCompositionBlock, parse_composition
@@ -45,13 +46,43 @@ class BertLayerAdaptersMixin:
     def add_adapter(self, adapter_name: str, layer_idx: int):
         self.attention.output.add_adapter(adapter_name, layer_idx)
         self.output.add_adapter(adapter_name, layer_idx)
+        self.adapter_function.append(adapter_name)
 
     def enable_adapters(
         self, adapter_setup: AdapterCompositionBlock, unfreeze_adapters: bool, unfreeze_attention: bool
     ):
+        if self.config.forward_mode == 'Mix':
+            self.uni_adapter = np.unique(self.adapter_function)
+            cnt = len(self.uni_adapter)
+            """
+            self.ita = torch.nn.Parameter(torch.tensor([[self.config.mix_ini] * int(cnt / 2), 
+                                                        [-self.config.mix_ini-np.log(int(cnt / 2))] * int(cnt / 2)]).view(cnt, 1), requires_grad=False)
+            """
+            self.ita = torch.nn.Parameter(torch.tensor([[self.config.mix_ini] * int(cnt - 1) + [-self.config.mix_ini]]).view(cnt, 1), requires_grad=False)
         self.attention.output.enable_adapters(adapter_setup, unfreeze_adapters, unfreeze_attention)
         self.output.enable_adapters(adapter_setup, unfreeze_adapters, unfreeze_attention)
 
+    def setup_task_adapter(self, cnt, tid):
+        max_dim = self.ita.argmax()
+        self.adapter_function[tid] = str(self.uni_adapter[max_dim])
+        self.adapter_function = self.adapter_function[:tid + 1]
+        print("Layer:{}".format(cnt))
+        print(self.adapter_function)
+
+        self.ita = None
+        del_list = []
+        for name in self.attention.output.adapters:
+            if name not in self.adapter_function:
+                del_list.append(name)
+        for name in del_list:
+            del self.attention.output.adapters[name]
+            del self.output.adapters[name]
+
+        # if (str(tid) + "-") in self.adapter_function[tid]:
+        if str(tid) in self.adapter_function[tid]:
+            return True
+        else:
+            return False
 
 class BertEncoderAdaptersMixin:
     """Adds adapters to the BertEncoder module."""
@@ -150,9 +181,27 @@ class BertModelAdaptersMixin(InvertibleAdaptersMixin, ModelAdaptersMixin):
             final_list.append({
                 "attention": layer.attention.output.adapters,
                 "output": layer.output.adapters,
+                "adapter_function":layer.adapter_function
             })
         return final_list
-
+    def setup_task_adapter(self, tid):
+        res = []
+        for cnt, layer in enumerate(self.encoder.layer):
+            c = layer.setup_task_adapter(cnt, tid)
+            res.append(c)
+        print(res)
+        cnt_true = 0
+        for i in res:
+            if i:
+                cnt_true += 1
+        return cnt_true
+    def add_adapter_by_list(self, adapter_list: list, config=None):
+        for i, layer in enumerate(self.encoder.layer):
+            layer.attention.output.adapters = adapter_list[i]["attention"]
+            layer.output.adapters = adapter_list[i]["output"]
+            layer.adapter_function = adapter_list[i]["adapter_function"]
+            pass
+        pass
 
 class BertModelHeadsMixin(ModelWithFlexibleHeadsAdaptersMixin):
     """

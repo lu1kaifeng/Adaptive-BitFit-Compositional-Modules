@@ -21,7 +21,6 @@ import os
 import warnings
 from dataclasses import dataclass
 from typing import Optional, Tuple
-
 import torch
 import torch.utils.checkpoint
 from torch import nn
@@ -445,6 +444,7 @@ class BertOutput(BertOutputAdaptersMixin, nn.Module):
 class BertLayer(BertLayerAdaptersMixin, nn.Module):
     def __init__(self, config):
         super().__init__()
+        self.config = config
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
         self.attention = BertAttention(config)
@@ -455,6 +455,7 @@ class BertLayer(BertLayerAdaptersMixin, nn.Module):
             self.crossattention = BertAttention(config)
         self.intermediate = BertIntermediate(config)
         self.output = BertOutput(config)
+        self.adapter_function = []
 
     def forward(
         self,

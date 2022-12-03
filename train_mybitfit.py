@@ -19,15 +19,18 @@ from parallel import DataParallelModel, DataParallelCriterion
 from collections import OrderedDict
 from utils_mybitfit import *
 from settings_mybitfit import args, TASK_DICT, init_logging, MODEL_CONFIG, MODEL_CLASS, SPECIAL_TOKENS, CONFIG_CLASS
-from settings_mybitfit import TOKENIZER, SPECIAL_TOKEN_IDS, FILL_VAL, SAVE_NAME, FINAL_SAVE_NAME, TOKENS_WEIGHT, CONFIG_NAME
+from settings_mybitfit import TOKENIZER, SPECIAL_TOKEN_IDS, FILL_VAL, SAVE_NAME, FINAL_SAVE_NAME, TOKENS_WEIGHT, \
+    CONFIG_NAME
 from scheduler import AnnealingLR
 import tqdm
 from torch.nn import CrossEntropyLoss
+
 logger = logging.getLogger(__name__)
 
 random.seed(args.seed)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
+
 
 def load_old_adapter(model, newname, oldname):
     state_dict = model.state_dict()
@@ -38,6 +41,7 @@ def load_old_adapter(model, newname, oldname):
             new_state_dict[new_i] = state_dict[i].clone().detach()
     m, n = model.load_state_dict(new_state_dict, strict=False)
     logger.info("Load old adapter weight to new adapter weight, Unexpected: {}".format(n))
+
 
 # Load pretrained adapters, not used in this paper
 def load_pre_adapter(model, newname):
@@ -50,6 +54,7 @@ def load_pre_adapter(model, newname):
             logger.info("Load from {} to {}".format(i, new_i))
     m, n = model.load_state_dict(new_state_dict, strict=False)
     logger.info("Load old adapter weight to new adapter weight, Unexpected: {}".format(n))
+
 
 # Calculate the entropy for weight coefficient
 def cal_entropy_loss(ita):
@@ -92,8 +97,8 @@ def learnable_para_calculate(model, note, printname=False):
             if "ita" in name:
                 param_opt.append((name, param))
             # """
-    logger.info(note + " Number of learned parameter: %.2fM" % (learn_sum/1e6))
-    logger.info(note + " Number of else parameter: %.2fM" % (else_sum/1e6))
+    logger.info(note + " Number of learned parameter: %.2fM" % (learn_sum / 1e6))
+    logger.info(note + " Number of else parameter: %.2fM" % (else_sum / 1e6))
     logger.info(note + " Ratio: {}".format(1.0 * (learn_sum + else_sum) / else_sum))
     return param_opt
 
@@ -130,12 +135,14 @@ def old_validation(model, valid_dataloader, train_loss_fct):
             torch.cuda.empty_cache()
             n_inputs = cqa[0].shape[0]
             model.config.batch_task_id = task_id[0][0].item()
-            qa_loss, lm_loss = get_losses(model, cqa[0].cuda(), Y[0].cuda(), gen_X[0].cuda(), gen_Y[0].cuda(), train_loss_fct)
+            qa_loss, lm_loss = get_losses(model, cqa[0].cuda(), Y[0].cuda(), gen_X[0].cuda(), gen_Y[0].cuda(),
+                                          train_loss_fct)
             cum_loss += (qa_loss + lm_loss) * n_inputs
             cum_qa_loss += qa_loss * n_inputs
             cum_lm_loss += lm_loss * n_inputs
             cur_n_inputs += n_inputs
     return cum_loss / cur_n_inputs, cum_qa_loss / cur_n_inputs, cum_lm_loss / cur_n_inputs
+
 
 def validation(model, iterator):
     model.eval()
@@ -144,11 +151,12 @@ def validation(model, iterator):
     cum_loss = 0
     with torch.no_grad():
         for i, batch in enumerate(iterator):
-            tokens_x_2d, entities_x_3d, postags_x_2d, triggers_y_2d, arguments_2d, seqlens_1d, head_indexes_2d, words_2d, triggers_2d, adjm,task_id = batch
+            tokens_x_2d, entities_x_3d, postags_x_2d, triggers_y_2d, arguments_2d, seqlens_1d, head_indexes_2d, words_2d, triggers_2d, adjm, task_id = batch
 
-            trigger_loss, triggers_y_2d, trigger_hat_2d, argument_hidden, argument_keys = model.predict_triggers(tokens_x_2d=tokens_x_2d, entities_x_3d=entities_x_3d,
-                                                                                                                          postags_x_2d=postags_x_2d, head_indexes_2d=head_indexes_2d,
-                                                                                                                          triggers_y_2d=triggers_y_2d, arguments_2d=arguments_2d, adjm=adjm)
+            trigger_loss, triggers_y_2d, trigger_hat_2d, argument_hidden, argument_keys = model.predict_triggers(
+                tokens_x_2d=tokens_x_2d, entities_x_3d=entities_x_3d,
+                postags_x_2d=postags_x_2d, head_indexes_2d=head_indexes_2d,
+                triggers_y_2d=triggers_y_2d, arguments_2d=arguments_2d, adjm=adjm)
 
             words_all.extend(words_2d)
             triggers_all.extend(triggers_2d)
@@ -156,7 +164,8 @@ def validation(model, iterator):
             arguments_all.extend(arguments_2d)
 
             if len(argument_keys) > 0:
-                argument_loss, arguments_y_2d, argument_hat_1d, argument_hat_2d = model.predict_arguments(argument_hidden, argument_keys, arguments_2d, adjm)
+                argument_loss, arguments_y_2d, argument_hat_1d, argument_hat_2d = model.predict_arguments(
+                    argument_hidden, argument_keys, arguments_2d, adjm)
                 arguments_hat_all.extend(argument_hat_2d)
                 # if i == 0:
 
@@ -232,7 +241,6 @@ def validation(model, iterator):
     argument_p, argument_r, argument_f1 = calc_metric(arguments_true, arguments_pred)
     print('P={:.3f}\tR={:.3f}\tF1={:.3f}'.format(argument_p, argument_r, argument_f1))
 
-
     print('[trigger identification]')
     triggers_true = [(item[0], item[1], item[2]) for item in triggers_true]
     triggers_pred = [(item[0], item[1], item[2]) for item in triggers_pred]
@@ -248,15 +256,17 @@ def validation(model, iterator):
     metric = '[trigger classification]\tP={:.3f}\tR={:.3f}\tF1={:.3f}\n'.format(trigger_p, trigger_r, trigger_f1)
     metric += '[argument classification]\tP={:.3f}\tR={:.3f}\tF1={:.3f}\n'.format(argument_p, argument_r, argument_f1)
     metric += '[trigger identification]\tP={:.3f}\tR={:.3f}\tF1={:.3f}\n'.format(trigger_p_, trigger_r_, trigger_f1_)
-    metric += '[argument identification]\tP={:.3f}\tR={:.3f}\tF1={:.3f}\n'.format(argument_p_, argument_r_, argument_f1_)
-    #final = fname + ".trigger-F%.2f argument-F%.2f" % (trigger_f1, argument_f1)
+    metric += '[argument identification]\tP={:.3f}\tR={:.3f}\tF1={:.3f}\n'.format(argument_p_, argument_r_,
+                                                                                  argument_f1_)
+    # final = fname + ".trigger-F%.2f argument-F%.2f" % (trigger_f1, argument_f1)
     '''with open(final, 'w', encoding="utf-8") as fout:
         result = open("temp", "r", encoding="utf-8").read()
         fout.write("{}\n".format(result))
         fout.write(metric)'''
-    #os.remove("temp")
-    #return metric, trigger_f1, argument_f1
+    # os.remove("temp")
+    # return metric, trigger_f1, argument_f1
     return cum_loss / len(iterator)
+
 
 # Clear model gradient
 def clear(model):
@@ -267,21 +277,28 @@ def clear(model):
     return model
 
 
-def load_model(model_dir):
-    from mytransformers import GPT2LMHeadModel, GPT2Config
+def load_model(model_dir,return_adapter_list=False):
+    from mytransformers import BertModel, BertConfig
 
-    model_config = GPT2Config.from_json_file(os.path.join(model_dir, "config.json"))
-    model = GPT2LMHeadModel(model_config)
+    model_config = BertConfig.from_json_file(os.path.join(model_dir, "config.json"))
+    model = BertModel(model_config)
     model.resize_token_embeddings(50260 + len(args.tasks))
 
-    adapter_list = np.load(os.path.join(model_dir, "adapter_list.npy"))
+    adapter_list = np.load(os.path.join(model_dir, "adapter_list.npy"), allow_pickle=True)
     model.add_adapter_by_list(adapter_list, config=args.adapt_type)
     state_dict = torch.load(os.path.join(model_dir, "model-finish"), map_location='cuda:0')
-    m, n = model.load_state_dict(state_dict, strict=False)
+    net = Net(trigger_size=len(all_triggers), PreModel=model, entity_size=len(all_entities),
+              all_postags=len(all_postags),
+              argument_size=len(all_arguments), device=args.device_ids[0], idx2trigger=idx2trigger)
+    m, n = net.load_state_dict(state_dict, strict=False)
     logger.info("Missing : {}, Unexpected: {}".format(m, n))
-    model.cuda()
+    net.cuda()
 
-    return model
+    if return_adapter_list:
+        return net,adapter_list
+    else:
+        return net
+
 
 # Decision stage
 def Mix(task_ids, model):
@@ -295,25 +312,21 @@ def Mix(task_ids, model):
     model_dir = get_model_dir(tasks)
     make_dir(model_dir)
 
-    train_dataset = [swap_name(TASK_DICT[t]["train"], args.seq_distil, args.ref1) for t in tasks]
-    valid_dataset = [TASK_DICT[t]["test"] for t in tasks]
-
     if args.load_model_for_stage:
-        prev_tasks = [args.tasks[task_ids[0]-1]]
+        prev_tasks = [args.tasks[task_ids[0] - 1]]
         prev_model_dir = get_model_dir(prev_tasks)
         model = load_model(prev_model_dir)
     else:
-        prev_tasks = [args.tasks[task_ids[0]-1]]
+        prev_tasks = [args.tasks[task_ids[0] - 1]]
         prev_model_dir = get_model_dir(prev_tasks)
-        load_model(prev_model_dir)
 
-    model.config.forward_mode = 'Mix'
-    model.config.testing = False
-    model.config.mix_ini = args.mix_ini
-    model.add_adapter(str(task_ids[0]), config=args.adapt_type)
+    model.PreModel.config.forward_mode = 'Mix'
+    model.PreModel.config.testing = False
+    model.PreModel.config.mix_ini = args.mix_ini
+    model.PreModel.add_adapter(str(task_ids[0]), config=args.adapt_type)
     if args.pretrain_adapter:
         load_pre_adapter(model, str(task_ids[0]))
-    model.train_adapter(str(task_ids[0]))
+    model.PreModel.train_adapter(str(task_ids[0]))
     model.cuda()
 
     if args.clear_model:
@@ -321,7 +334,7 @@ def Mix(task_ids, model):
 
     param_opt = learnable_para_calculate(model, "whole", True)
 
-    gen_token = get_gen_token(tasks[0])
+    '''gen_token = get_gen_token(tasks[0])
     TOKENIZER.add_tokens([gen_token])
     TOKENIZER.save_pretrained(model_dir)
     SPECIAL_TOKENS[tasks[0]] = gen_token
@@ -332,14 +345,14 @@ def Mix(task_ids, model):
     global TOKENS_WEIGHT
     while 50260 + len(args.tasks) != TOKENS_WEIGHT.shape[0]:
         TOKENS_WEIGHT = torch.cat((TOKENS_WEIGHT, torch.ones([1]).cuda()))
-        logger.info("Add one dim weight!")
+        logger.info("Add one dim weight!")'''
 
     if not args.fp32:  # again because resize_token_embeddings makes embedding layer fp32
         model = FP16_Module(model)
 
     logger.warning("Adapter Mix test, not using extra data now...")
-    train_qadata = ACE2005Dataset('./ace2005/train.json')
-    valid_qadata = ACE2005Dataset('./ace2005/dev.json')
+    train_qadata = ACE2005Dataset('./ace2005/train.json', task_ids[0])
+    valid_qadata = ACE2005Dataset('./ace2005/dev.json', task_ids[0])
 
     # max_train_batch_size = max(len(train_qadata) // args.min_n_steps, args.min_batch_size)
     max_train_batch_size = args.z_max_batch_size
@@ -360,14 +373,16 @@ def Mix(task_ids, model):
     # logger.info(param_optimizer)
     no_decay = ['bias', 'ln_1', 'ln_2', 'ln_f']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': args.weight_decay},
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+         'weight_decay': args.weight_decay},
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
 
     logger.info("USE ARGS.ADAM_EPSILON NOW.....")
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
     scheduler = get_constant_schedule_with_warmup(optimizer, args.z_warmup_step)
-    train_loss_fct = CrossEntropyLoss(ignore_index=FILL_VAL, weight=TOKENS_WEIGHT.type(torch.float if args.fp32 else torch.half))
+    train_loss_fct = CrossEntropyLoss(ignore_index=FILL_VAL,
+                                      weight=TOKENS_WEIGHT.type(torch.float if args.fp32 else torch.half))
 
     ita = None
     tot_n_steps = 0
@@ -388,8 +403,9 @@ def Mix(task_ids, model):
                 logger.info(cqa[0].shape)
                 continue
 
-            model.config.batch_task_id = task_id[0][0].item()
-            losses = get_losses(model, cqa[0].cuda(), Y[0].cuda(), gen_X[0].cuda(), gen_Y[0].cuda(), train_loss_fct, True)
+            model.config.batch_task_id = task_id[0].item()
+            losses = get_losses(model, cqa[0].cuda(), Y[0].cuda(), gen_X[0].cuda(), gen_Y[0].cuda(), train_loss_fct,
+                                True)
 
             if losses[1].item() == 0:
                 loss = losses[0]
@@ -423,11 +439,12 @@ def Mix(task_ids, model):
                 lr = scheduler.get_lr()
 
             if (n_steps + 1) % args.logging_steps == 0:
-                logger.info('progress {:.3f} , lr {:.1E} , loss {:.3f} , qa loss {:.3f} , lm loss {:.3f} , en loss {:.3f}, avg batch size {:.1f}'
-                            .format(ep + cur_n_inputs/len(train_qadata),
-                                    lr, cum_loss/cur_n_inputs,
-                                    cum_qa_loss/cur_n_inputs, cum_lm_loss/cur_n_inputs,
-                                    cum_en_loss/cur_n_inputs, cur_n_inputs/(n_steps + 1)))
+                logger.info(
+                    'progress {:.3f} , lr {:.1E} , loss {:.3f} , qa loss {:.3f} , lm loss {:.3f} , en loss {:.3f}, avg batch size {:.1f}'
+                    .format(ep + cur_n_inputs / len(train_qadata),
+                            lr, cum_loss / cur_n_inputs,
+                            cum_qa_loss / cur_n_inputs, cum_lm_loss / cur_n_inputs,
+                            cum_en_loss / cur_n_inputs, cur_n_inputs / (n_steps + 1)))
         if not args.gradient_debug:
             tot_n_steps += (n_steps + 1)
             validation(model, valid_dataloader)
@@ -467,7 +484,7 @@ def Mix(task_ids, model):
     current_fit_epoch = None
     trans = True
 
-    torch.save(model.state_dict(), os.path.join(model_dir, SAVE_NAME+"finish"))
+    torch.save(model.state_dict(), os.path.join(model_dir, SAVE_NAME + "finish"))
     adapter_list = model.get_adapter_list()
     np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
     logger.info("MODEL SAVED!")
@@ -477,6 +494,7 @@ def Mix(task_ids, model):
     torch.cuda.empty_cache()
 
     return model, fit_or_not, trans, current_fit_epoch
+
 
 # An extra phase to train newly added modules and reused modules on the new task only, not used
 def Fit(task_ids, model, current_fit_epoch=None):
@@ -514,7 +532,7 @@ def Fit(task_ids, model, current_fit_epoch=None):
     SPECIAL_TOKEN_IDS[tasks[0]] = TOKENIZER.convert_tokens_to_ids(gen_token)
     logger.info('gen token = {} , gen token id = {}'.format(gen_token, SPECIAL_TOKEN_IDS[tasks[0]]))
     MODEL_CONFIG.vocab_size = len(TOKENIZER)
-    MODEL_CONFIG.to_json_file(os.path.join(model_dir,CONFIG_NAME))
+    MODEL_CONFIG.to_json_file(os.path.join(model_dir, CONFIG_NAME))
     global TOKENS_WEIGHT
     while 50260 + len(args.tasks) != TOKENS_WEIGHT.shape[0]:
         TOKENS_WEIGHT = torch.cat((TOKENS_WEIGHT, torch.ones([1]).cuda()))
@@ -548,14 +566,16 @@ def Fit(task_ids, model, current_fit_epoch=None):
     # logger.info(param_optimizer)
     no_decay = ['bias', 'ln_1', 'ln_2', 'ln_f']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': args.weight_decay},
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+         'weight_decay': args.weight_decay},
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
 
     logger.info("USE ARGS.ADAM_EPSILON NOW.....")
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
     scheduler = get_constant_schedule_with_warmup(optimizer, args.z_warmup_step)
-    train_loss_fct = CrossEntropyLoss(ignore_index=FILL_VAL, weight=TOKENS_WEIGHT.type(torch.float if args.fp32 else torch.half))
+    train_loss_fct = CrossEntropyLoss(ignore_index=FILL_VAL,
+                                      weight=TOKENS_WEIGHT.type(torch.float if args.fp32 else torch.half))
 
     tot_n_steps = 0
     train_once = TrainStep(model, optimizer, scheduler)
@@ -596,25 +616,27 @@ def Fit(task_ids, model, current_fit_epoch=None):
                 lr = scheduler.get_lr()
 
             if (n_steps + 1) % args.logging_steps == 0:
-                logger.info('progress {:.3f} , lr {:.1E} , loss {:.3f} , qa loss {:.3f} , lm loss {:.3f}, avg batch size {:.1f}'
-                            .format(ep + cur_n_inputs/len(train_qadata),
-                                    lr, cum_loss/cur_n_inputs,
-                                    cum_qa_loss/cur_n_inputs, cum_lm_loss/cur_n_inputs,
-                                    cur_n_inputs/(n_steps + 1)))
+                logger.info(
+                    'progress {:.3f} , lr {:.1E} , loss {:.3f} , qa loss {:.3f} , lm loss {:.3f}, avg batch size {:.1f}'
+                    .format(ep + cur_n_inputs / len(train_qadata),
+                            lr, cum_loss / cur_n_inputs,
+                            cum_qa_loss / cur_n_inputs, cum_lm_loss / cur_n_inputs,
+                            cur_n_inputs / (n_steps + 1)))
 
         if not args.gradient_debug:
             tot_n_steps += (n_steps + 1)
             val_loss, val_qa_loss, val_lm_loss = validation(model, valid_dataloader, train_loss_fct)
-            logger.info('epoch {}/{} done , tot steps {} , loss {:.2f} , qa loss {:.2f} , lm loss {:.2f}, val loss {:.2f}, vqa loss {:.2f}, vlm loss {:.2f}, avg batch size {:.1f}'.format(
-                ep+1, n_train_epochs, tot_n_steps,
-                cum_loss/cur_n_inputs, cum_qa_loss/cur_n_inputs,
-                cum_lm_loss/cur_n_inputs, val_loss,
-                val_qa_loss, val_lm_loss, cur_n_inputs/(n_steps+1)
-            ))
+            logger.info(
+                'epoch {}/{} done , tot steps {} , loss {:.2f} , qa loss {:.2f} , lm loss {:.2f}, val loss {:.2f}, vqa loss {:.2f}, vlm loss {:.2f}, avg batch size {:.1f}'.format(
+                    ep + 1, n_train_epochs, tot_n_steps,
+                    cum_loss / cur_n_inputs, cum_qa_loss / cur_n_inputs,
+                    cum_lm_loss / cur_n_inputs, val_loss,
+                    val_qa_loss, val_lm_loss, cur_n_inputs / (n_steps + 1)
+                ))
 
         print_para(model)
 
-    torch.save(model.state_dict(), os.path.join(model_dir, SAVE_NAME+"finish"))
+    torch.save(model.state_dict(), os.path.join(model_dir, SAVE_NAME + "finish"))
     adapter_list = model.get_adapter_list()
     np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
     logger.info("MODEL SAVED!")
@@ -625,8 +647,9 @@ def Fit(task_ids, model, current_fit_epoch=None):
 
     return model
 
+
 # Training stage
-def Transfer(task_ids, model, fit_bonus=0,net=None):
+def Transfer(task_ids, model, fit_bonus=0, net=None):
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -636,11 +659,10 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
     logger.info("start to transfer { task: %s, seq train type: %s }" % (tasks, args.seq_train_type))
     model_dir = get_model_dir(tasks)
 
-    train_dataset = [swap_name(TASK_DICT[t]["train"], args.seq_distil, args.ref1) for t in tasks]
-    valid_dataset = [TASK_DICT[t]["test"] for t in tasks]
     train_extra_data = []
     if not args.generate_after:
-        if ("lll" in args.seq_train_type or "llewc" in args.seq_train_type) and task_ids[0] > 0 and not args.pseudo_ablation:
+        if ("lll" in args.seq_train_type or "llewc" in args.seq_train_type) and task_ids[
+            0] > 0 and not args.pseudo_ablation:
             adapter_list = np.load(os.path.join(model_dir, "adapter_list.npy"))
             replay = []
             for layer_list in adapter_list:
@@ -653,7 +675,7 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
             logger.info("replay tasks: {}".format(replay))
 
             if len(replay) > 0:
-                prev_task = args.tasks[task_ids[0]-1]
+                prev_task = args.tasks[task_ids[0] - 1]
                 model.config.forward_mode = 'Transfer'
                 model.config.testing = False
                 with torch.no_grad():
@@ -674,7 +696,7 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
 
         torch.manual_seed(42)
         model.resize_token_embeddings(50260 + len(args.tasks))
-        #logger.info(model.transformer.wte.weight)
+        # logger.info(model.transformer.wte.weight)
         torch.manual_seed(args.seed)
 
         model.config.forward_mode = 'Transfer'
@@ -691,14 +713,13 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
         if args.clear_model:
             model = clear(model)
 
-
         if not args.fp32:
             logger.info("Not support fp32 on mytransformers/adapters now...")
             exit(0)
             # model = FP16_Module(model)
     else:
         if args.load_model_for_stage:
-            prev_tasks = [args.tasks[task_ids[0]-1]]
+            prev_tasks = [args.tasks[task_ids[0] - 1]]
             prev_model_dir = get_model_dir(prev_tasks)
             model = load_model(prev_model_dir)
 
@@ -723,9 +744,9 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
         if args.clear_model:
             model = clear(model)
     if net is None:
-        net = Net(trigger_size=len(all_triggers),PreModel=model,entity_size=len(all_entities),
-            all_postags=len(all_postags),
-            argument_size=len(all_arguments),device=args.device_ids[0], idx2trigger = idx2trigger)
+        net = Net(trigger_size=len(all_triggers), PreModel=model, entity_size=len(all_entities),
+                  all_postags=len(all_postags),
+                  argument_size=len(all_arguments), device=args.device_ids[0], idx2trigger=idx2trigger)
         param_opt = learnable_para_calculate(net, "whole", True)
         net.cuda()
     """
@@ -739,15 +760,15 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
 
         logger.info('extra training data size: {}'.format(len(train_extra_data)))
 """
-    #gen_token = get_gen_token(tasks[0])
-    #TOKENIZER.add_tokens([gen_token])
+    # gen_token = get_gen_token(tasks[0])
+    # TOKENIZER.add_tokens([gen_token])
     TOKENIZER.save_pretrained(model_dir)
-    #SPECIAL_TOKENS[tasks[0]] = gen_token
-    #SPECIAL_TOKEN_IDS[tasks[0]] = TOKENIZER.convert_tokens_to_ids(gen_token)
-    #logger.info('gen token = {} , gen token id = {}'.format(gen_token, SPECIAL_TOKEN_IDS[tasks[0]]))
+    # SPECIAL_TOKENS[tasks[0]] = gen_token
+    # SPECIAL_TOKEN_IDS[tasks[0]] = TOKENIZER.convert_tokens_to_ids(gen_token)
+    # logger.info('gen token = {} , gen token id = {}'.format(gen_token, SPECIAL_TOKEN_IDS[tasks[0]]))
     MODEL_CONFIG.vocab_size = len(TOKENIZER)
-    MODEL_CONFIG.to_json_file(os.path.join(model_dir,CONFIG_NAME))
-    #global TOKENS_WEIGHT
+    MODEL_CONFIG.to_json_file(os.path.join(model_dir, CONFIG_NAME))
+    # global TOKENS_WEIGHT
     # while 50260 + len(args.tasks) != TOKENS_WEIGHT.shape[0]:
     #     TOKENS_WEIGHT = torch.cat((TOKENS_WEIGHT, torch.ones([1]).cuda()))
     #     logger.info("Add one dim weight!")
@@ -756,8 +777,8 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
         model = FP16_Module(model)
 
     logger.warning("Transfer, using extra data now...")
-    train_qadata = ACE2005Dataset('./ace2005/train.json')
-    valid_qadata = ACE2005Dataset('./ace2005/dev.json')
+    train_qadata = ACE2005Dataset('./ace2005/train.json', task_ids[0])
+    valid_qadata = ACE2005Dataset('./ace2005/dev.json', task_ids[0])
 
     max_train_batch_size = args.z_max_batch_size
     train_dataloader = create_dataloader(train_qadata, "train", max_train_batch_size)
@@ -781,7 +802,8 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
 
     no_decay = ['bias', 'ln_1', 'ln_2', 'ln_f']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': args.weight_decay},
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+         'weight_decay': args.weight_decay},
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
     optimizer_grouped_names = [
@@ -791,7 +813,7 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
     logger.info("name group")
     logger.info(optimizer_grouped_names)
 
-    #logger.info("USE ARGS.ADAM_EPSILON NOW.....")
+    # logger.info("USE ARGS.ADAM_EPSILON NOW.....")
     optimizer = Adam(optimizer_grouped_parameters, lr=args.z_train_lrs[task_ids[0]], weight_decay=args.l2)
 
     if args.constant_sch:
@@ -799,15 +821,18 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
         scheduler = get_constant_schedule_with_warmup(optimizer, args.z_warmup_step)
     elif not args.constant_sch and (not args.lamaml or (args.lamaml and task_ids[0] == 0)):
         logger.info("Start to use Annealling scheduler!")
-        scheduler = AnnealingLR(optimizer, start_lr=args.z_train_lrs[task_ids[0]], warmup_iter=int(args.n_warmup_ratio*len(train_qadata)), 
+        scheduler = AnnealingLR(optimizer, start_lr=args.z_train_lrs[task_ids[0]],
+                                warmup_iter=int(args.n_warmup_ratio * len(train_qadata)),
                                 num_iters=int(n_train_optimization_steps), decay_style=args.decay_style)
     elif not args.constant_sch:
         logger.info("Start to use Annealling scheduler!")
-        scheduler = AnnealingLR(optimizer, start_lr=args.z_train_lrs[task_ids[0]], warmup_iter=int(args.n_warmup_ratio*len(train_qadata)), 
-                                num_iters=int(train_qadata.get_c_len() * 2 * n_train_epochs) + 100, decay_style=args.decay_style)
+        scheduler = AnnealingLR(optimizer, start_lr=args.z_train_lrs[task_ids[0]],
+                                warmup_iter=int(args.n_warmup_ratio * len(train_qadata)),
+                                num_iters=int(train_qadata.get_c_len() * 2 * n_train_epochs) + 100,
+                                decay_style=args.decay_style)
 
     tot_n_steps = 0
-    #train_once = TrainStep(model, optimizer, scheduler)
+    # train_once = TrainStep(model, optimizer, scheduler)
 
     # The reason why we use "path" variable: (path is passed to AdamW, modified in mytransformers/optimization.py)
     # The calculation path in this stage is different for different tasks in this stage
@@ -829,7 +854,7 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
             path_one = []
             path_two = []
             for n, p in param_optimizer:
-                if not any(nd in n for nd in no_decay): # no no-decay in n
+                if not any(nd in n for nd in no_decay):  # no no-decay in n
                     flag = 0
                     for name in c_name:
                         if name in n:
@@ -838,7 +863,7 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
                             break
                     if flag == 0:
                         path_one.append(False)
-                else:# contains no-decay in n
+                else:  # contains no-decay in n
                     flag = 0
                     for name in c_name:
                         if name in n:
@@ -857,21 +882,21 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
             else:
                 shared.append(False)
         logger.info("shared: {}".format(shared))
-    val_loss = 10000
-    epochs_no_improve = 0
+    from early_stop import EarlyStopping
+    early_stopping = EarlyStopping(patience=20, verbose=True, trace_func=lambda x: logger.info(x))
     for ep in range(n_train_epochs):
         logger.info("Epoch {}".format(ep))
-        #model.train()
+        # model.train()
         net.train()
         print_para(model)
         words_all, triggers_all, triggers_hat_all, arguments_all, arguments_hat_all = [], [], [], [], []
         triggers_true, triggers_pred, arguments_true, arguments_pred = [], [], [], []
-        cum_loss =  0
+        cum_loss = 0
 
-        for  n_steps, batch in tqdm.tqdm(enumerate(train_dataloader)):
+        for n_steps, batch in tqdm.tqdm(enumerate(train_dataloader)):
             net.zero_grad()
             optimizer.zero_grad()
-            tokens_x_2d, entities_x_3d, postags_x_2d, triggers_y_2d, arguments_2d, seqlens_1d, head_indexes_2d, words_2d, triggers_2d, adjm,task_id = batch
+            tokens_x_2d, entities_x_3d, postags_x_2d, triggers_y_2d, arguments_2d, seqlens_1d, head_indexes_2d, words_2d, triggers_2d, adjm, task_id = batch
             '''if cqa is None:
                 continue
 
@@ -914,7 +939,7 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
 
             else:
                 loss = trigger_loss
-            cum_loss +=loss.item()
+            cum_loss += loss.item()
             nn.utils.clip_grad_norm_(net.parameters(), 3.0)
             loss.backward()
 
@@ -1009,18 +1034,20 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
                 triggers_true, triggers_pred, arguments_true, arguments_pred = [], [], [], []
                 #########################
                 if len(argument_keys) > 0:
-                    logger.info("[Events Detected]step: {}, loss: {:.3f}, trigger_loss:{:.3f}, argument_loss:{:.3f}".format(n_steps,
-                                                                                                            loss,
-                                                                                                            trigger_loss.item(),
-                                                                                                            argument_loss.item())+
-                          '[trigger] P={:.3f}  R={:.3f}  F1={:.3f}'.format(trigger_p, trigger_r, trigger_f1)+
-                          '[argument] P={:.3f}  R={:.3f}  F1={:.3f}'.format(argument_p, argument_r, argument_f1)
-                          )
+                    logger.info(
+                        "[Events Detected]step: {}, loss: {:.3f}, trigger_loss:{:.3f}, argument_loss:{:.3f}".format(
+                            n_steps,
+                            loss,
+                            trigger_loss.item(),
+                            argument_loss.item()) +
+                        '[trigger] P={:.3f}  R={:.3f}  F1={:.3f}'.format(trigger_p, trigger_r, trigger_f1) +
+                        '[argument] P={:.3f}  R={:.3f}  F1={:.3f}'.format(argument_p, argument_r, argument_f1)
+                        )
                     cum_loss = 0
                 else:
-                    logger.info("[No Events Detected]step: {}, loss: {:.3f} ".format(n_steps, loss)+
-                          '[trigger] P={:.3f}  R={:.3f}  F1={:.3f}'.format(trigger_p, trigger_r, trigger_f1)
-                          )
+                    logger.info("[No Events Detected]step: {}, loss: {:.3f} ".format(n_steps, loss) +
+                                '[trigger] P={:.3f}  R={:.3f}  F1={:.3f}'.format(trigger_p, trigger_r, trigger_f1)
+                                )
                     cum_loss = 0
                 pass
 
@@ -1028,13 +1055,8 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
             tot_n_steps += (n_steps + 1)
             new_val_loss = validation(net, valid_dataloader)
             logger.info("valid loss: {}".format(new_val_loss))
-            if new_val_loss >= val_loss:
-                val_loss = new_val_loss
-                epochs_no_improve+=1
-                logger.info("no improvements for this epoch")
-            else:
-                val_loss = new_val_loss
-            if epochs_no_improve > 2:
+            early_stopping(new_val_loss)
+            if early_stopping.early_stop:
                 break
             '''logger.info('epoch {}/{} done , tot steps {} , loss {:.2f} , qa loss {:.2f} , lm loss {:.2f}, val loss {:.2f}, vqa loss {:.2f}, vlm loss {:.2f}, avg batch size {:.1f}'.format(
                 ep+1, n_train_epochs, tot_n_steps,
@@ -1043,13 +1065,11 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
                 val_qa_loss, val_lm_loss, cur_n_inputs/(n_steps+1)
             ))'''
 
-
-
         print_para(model)
         if args.gradient_debug and task_ids[0] > 0:
             exit(0)
 
-    torch.save(net.state_dict(), os.path.join(model_dir, SAVE_NAME+"finish"))
+    torch.save(net.state_dict(), os.path.join(model_dir, SAVE_NAME + "finish"))
     adapter_list = model.get_adapter_list()
     np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
     logger.info("MODEL SAVED!")
@@ -1076,7 +1096,7 @@ def Transfer(task_ids, model, fit_bonus=0,net=None):
 
         exit(0)
 
-    return model
+    return net
 
 
 if __name__ == '__main__':
@@ -1138,41 +1158,31 @@ if __name__ == '__main__':
 
         model = None
         if args.z_debug_tsk_num >= 1:
-            from mytransformers import GPT2LMHeadModel, GPT2Config
+            from mytransformers import BertModel, BertConfig
 
             tasks = [args.tasks[args.z_debug_tsk_num - 1]]
             if args.z_debug_start_from_trans:
                 tasks = [args.tasks[args.z_debug_tsk_num]]
 
-            model_dir = get_model_dir(tasks)
-            model_config = GPT2Config.from_json_file(os.path.join(model_dir, "config.json"))
-            model = GPT2LMHeadModel(model_config)
-            model.resize_token_embeddings(50260 + len(args.tasks))
-
-            adapter_list = np.load(os.path.join(model_dir, "adapter_list.npy"))
-            model.add_adapter_by_list(adapter_list, config=args.adapt_type)
-            state_dict = torch.load(os.path.join(model_dir, "model-finish"), map_location='cuda:0')
-            m, n = model.load_state_dict(state_dict, strict=False)
-            logger.info("Missing : {}, Unexpected: {}".format(m, n))
-            model.cuda()
+            model,adapter_list = load_model(get_model_dir(tasks),return_adapter_list=True)
 
             global TOKENS_WEIGHT
             tsk_cnt = 0
             while tsk_cnt < args.z_debug_tsk_num:
-                TOKENS_WEIGHT = torch.cat((TOKENS_WEIGHT, torch.ones([1]).cuda()))
+                '''TOKENS_WEIGHT = torch.cat((TOKENS_WEIGHT, torch.ones([1]).cuda()))
                 gen_token = get_gen_token(args.tasks[tsk_cnt])
                 TOKENIZER.add_tokens([gen_token])
                 SPECIAL_TOKENS[args.tasks[tsk_cnt]] = gen_token
-                SPECIAL_TOKEN_IDS[args.tasks[tsk_cnt]] = TOKENIZER.convert_tokens_to_ids(gen_token)
+                SPECIAL_TOKEN_IDS[args.tasks[tsk_cnt]] = TOKENIZER.convert_tokens_to_ids(gen_token)'''
                 tsk_cnt += 1
 
             # model.resize_token_embeddings(len(TOKENIZER))
             if not args.fp32:
                 model = FP16_Module(model)
 
-            while 50260 + len(args.tasks) != TOKENS_WEIGHT.shape[0]:
+            '''while 50260 + len(args.tasks) != TOKENS_WEIGHT.shape[0]:
                 TOKENS_WEIGHT = torch.cat((TOKENS_WEIGHT, torch.ones([1]).cuda()))
-                logger.info("Add one dim weight!")
+                logger.info("Add one dim weight!")'''
 
         for task_id in range(args.z_debug_tsk_num, len(args.tasks)):
             # First task

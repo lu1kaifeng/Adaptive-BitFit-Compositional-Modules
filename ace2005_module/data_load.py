@@ -57,7 +57,8 @@ all_arguments, argument2idx, idx2argument = build_vocab(ARGUMENTS, BIO_tagging=F
 
 
 class ACE2005Dataset(data.Dataset):
-    def __init__(self, fpath):
+    def __init__(self, fpath,current_task):
+        self.current_task = current_task
         self.task_name_dict={'bc':0,'bn':1,'cts':2,'nw':3,'un':4,'wl':5}
         self.task_id = []
         self.sent_li, self.entities_li, self.postags_li, self.triggers_li, self.arguments_li, self.adjm_li = [], [], [], [], [], []
@@ -70,6 +71,8 @@ class ACE2005Dataset(data.Dataset):
             data = list(map(filter,data))
             data = list(sorted(data,key=lambda x:x['path']))
             for item in data:
+                if not (item['path'] == self.current_task):
+                    continue
                 words = item['words']
                 entities = [[NONE] for _ in range(len(words))]
                 triggers = [NONE] * len(words)
