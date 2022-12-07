@@ -90,13 +90,13 @@ def parse_args():
     parser.add_argument("--temperature_kd", type=float, default=2.0)
     parser.add_argument("--temperature_lm", type=float, default=1.0)
     parser.add_argument("--temperature_qa", type=float, default=1.0)
-    parser.add_argument("--test_batch_size", type=int, default=32)
+    parser.add_argument("--test_batch_size", type=int, default=16)
     parser.add_argument("--tokens_weight", type=float, default=5)
     parser.add_argument("--top_k_lm", type=int, default=20)
     parser.add_argument("--top_k_qa", type=int, default=20)
     parser.add_argument("--top_p_lm", type=float, default=0.)
     parser.add_argument("--top_p_qa", type=float, default=0.)
-    parser.add_argument("--train_batch_size", type=int, default=32)
+    parser.add_argument("--train_batch_size", type=int, default=16)
     parser.add_argument("--weight_decay", type=float, default=0.01)
     parser.add_argument("--qp_margin", type=float, default=0.5)
 
@@ -108,7 +108,7 @@ def parse_args():
     parser.add_argument("--ppl_thr", type=float, default=100.0, help='not used')
 
     parser.add_argument("--z_learning_rate", type=float, default=1e-3)
-    parser.add_argument("--z_warmup_step", type=int, default=1000)
+    parser.add_argument("--z_warmup_step", type=int, default=0)
     parser.add_argument("--z_step", type=int, default=300)
     parser.add_argument("--preseqlen", type=int, default=10, help='not used')
     parser.add_argument("--mid_dim", type=int, default=256, help='not used')
@@ -149,7 +149,7 @@ def parse_args():
     parser.add_argument("--replay_first", action="store_true", help='not used')
     parser.add_argument("--random_first", action="store_true", help='not used')
 
-    parser.add_argument('--grad_coe', nargs='+', type=float, default=[1.0, 1.0], help='not used')
+    parser.add_argument('--grad_coe', nargs='+', type=float, default=[1.0, 1.0,1.0,1.0,1.0], help='not used')
     parser.add_argument("--return_m_grads", action="store_true", help='not used')
     parser.add_argument("--last_half_is_whole", action="store_true", help='not used')
     parser.add_argument("--first_half_is_old", action="store_true", help='not used')
@@ -194,7 +194,7 @@ def parse_args():
     parser.add_argument("--gradient_debug", action="store_true")
     parser.add_argument("--whole_optim", action="store_true")
     parser.add_argument("--clear_model", action="store_true")
-    parser.add_argument("--whole_mix_step", type=int, default=6, help='the whole epoch number of decision stage')
+    parser.add_argument("--whole_mix_step", type=int, default=100, help='the whole epoch number of decision stage')
     parser.add_argument("--warm_mix_step", type=int, default=1, help='first multiple epochs, in which the weight coefficient is not trained')
     parser.add_argument("--fit_epoch", type=int, default=0, help='not used')
     parser.add_argument("--last_dim_coe", type=float, default=0.0, help='not used')
@@ -208,10 +208,10 @@ def parse_args():
     parser.add_argument("--generate_after", action="store_true")
     parser.add_argument("--mix_loss_coe", type=float, default=1.0, help='not used')
     parser.add_argument("--LOSS_alpha", type=float, default=1.0)
-    parser.add_argument("--partial_transfer", action="store_true", help='whether to fix unshared modules from old tasks')
+    parser.add_argument("--partial_transfer",action="store_true", help='whether to fix unshared modules from old tasks')
 
-    parser.add_argument('--z_train_epochs', nargs='+', type=int, default=[100, 100, 100, 100, 100], help='set task wise epochs')
-    parser.add_argument('--z_train_lrs', nargs='+', type=float, default=[1e-5], help='set task wise learning rate')
+    parser.add_argument('--z_train_epochs', nargs='+', type=int, default=[100, 100, 100, 100, 100,100], help='set task wise epochs')
+    parser.add_argument('--z_train_lrs', nargs='+', type=float, default=[2e-5,2e-5,2e-5,2e-5,2e-5,2e-5], help='set task wise learning rate')
 
     parser.add_argument("--layer_debug", action="store_true", help='this is for the module comparision in appendix')
     parser.add_argument("--layer_debug_cnt", type=int, default=-1)
@@ -221,6 +221,8 @@ def parse_args():
     parser.add_argument("--partial_learn", action="store_true", help='only learn newly added modules? not used')
 
     parser.add_argument("--pseudo_ablation", action="store_true", help='pseudo replay ablation study')
+
+    parser.add_argument("--tbx", action="store_true", help='TensorBoardX')
 
     args = parser.parse_args()
 

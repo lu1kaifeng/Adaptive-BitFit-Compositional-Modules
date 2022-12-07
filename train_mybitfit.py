@@ -1,3 +1,5 @@
+import shutil
+
 import torch
 from torch.optim import Adam
 from torch.utils.data import DataLoader
@@ -277,10 +279,11 @@ def clear(model):
     return model
 
 
-def load_model(model_dir,return_adapter_list=False):
+def load_model(model_dir, return_adapter_list=False):
     from mytransformers import BertModel, BertConfig
 
-    model_config = BertConfig.from_json_file(os.path.join(model_dir, "config.json"))
+    #model_config = BertConfig.from_json_file(os.path.join(model_dir, "config.json"))
+    model_config = BertConfig.from_json_file("./bert-large-uncased/config.json")
     model = BertModel(model_config)
     model.resize_token_embeddings(50260 + len(args.tasks))
 
@@ -295,7 +298,7 @@ def load_model(model_dir,return_adapter_list=False):
     net.cuda()
 
     if return_adapter_list:
-        return net,adapter_list
+        return net, adapter_list
     else:
         return net
 
@@ -312,13 +315,10 @@ def Mix(task_ids, model):
     model_dir = get_model_dir(tasks)
     make_dir(model_dir)
 
-    if args.load_model_for_stage:
-        prev_tasks = [args.tasks[task_ids[0] - 1]]
-        prev_model_dir = get_model_dir(prev_tasks)
-        model = load_model(prev_model_dir)
-    else:
-        prev_tasks = [args.tasks[task_ids[0] - 1]]
-        prev_model_dir = get_model_dir(prev_tasks)
+    prev_tasks = [args.tasks[task_ids[0] - 1]]
+    prev_model_dir = get_model_dir(prev_tasks)
+    model = load_model(prev_model_dir)
+
 
     model.PreModel.config.forward_mode = 'Mix'
     model.PreModel.config.testing = False
@@ -379,81 +379,162 @@ def Mix(task_ids, model):
     ]
 
     logger.info("USE ARGS.ADAM_EPSILON NOW.....")
-    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
+    # logger.info("USE ARGS.ADAM_EPSILON NOW.....")
+    optimizer = Adam(optimizer_grouped_parameters, lr=args.z_train_lrs[task_ids[0]], weight_decay=args.l2)
+    logger.info("Start to use constant scheduler!")
     scheduler = get_constant_schedule_with_warmup(optimizer, args.z_warmup_step)
-    train_loss_fct = CrossEntropyLoss(ignore_index=FILL_VAL,
-                                      weight=TOKENS_WEIGHT.type(torch.float if args.fp32 else torch.half))
 
     ita = None
     tot_n_steps = 0
-    train_once = TrainStep(model, optimizer, scheduler)
 
     mix_flag = 0
-
+    from early_stop import EarlyStopping
+    tbx_title = 'mix_' + str(task_ids[0]) + '/'
+    early_stopping = EarlyStopping(patience=5, verbose=True, trace_func=lambda x: logger.info(x))
     for ep in range(n_train_epochs):
+        logger.info("Epoch {}".format(ep))
         model.train()
-        cum_loss, cum_qa_loss, cum_lm_loss, cur_n_inputs = 0, 0, 0, 0
-        cum_en_loss = 0
+        print_para(model)
+        words_all, triggers_all, triggers_hat_all, arguments_all, arguments_hat_all = [], [], [], [], []
+        triggers_true, triggers_pred, arguments_true, arguments_pred = [], [], [], []
+        cum_loss = 0
         # learnable_para_calculate(model, "whole")
-        for n_steps, (_, _, cqa, _, Y, gen_X, gen_Y, task_id, idx) in enumerate(train_dataloader):
-            n_inputs = cqa[0].shape[0]
-            lens = cqa[0].shape[1]
-            if lens > 500:
-                # too long will cause memory error! (This should rarely happen, so the influence is trivial)
-                logger.info(cqa[0].shape)
-                continue
+        for n_steps, batch in tqdm.tqdm(enumerate(train_dataloader)):
+            tot_n_steps += 1
+            model.zero_grad()
+            optimizer.zero_grad()
+            tokens_x_2d, entities_x_3d, postags_x_2d, triggers_y_2d, arguments_2d, seqlens_1d, head_indexes_2d, words_2d, triggers_2d, adjm, task_id = batch
 
-            model.config.batch_task_id = task_id[0].item()
-            losses = get_losses(model, cqa[0].cuda(), Y[0].cuda(), gen_X[0].cuda(), gen_Y[0].cuda(), train_loss_fct,
-                                True)
+            model.PreModel.config.batch_task_id = task_id[0]
+            trigger_loss, triggers_y_2d, trigger_hat_2d, argument_hidden, argument_keys = model.predict_triggers(
+                tokens_x_2d=tokens_x_2d, entities_x_3d=entities_x_3d,
+                postags_x_2d=postags_x_2d, head_indexes_2d=head_indexes_2d,
+                triggers_y_2d=triggers_y_2d, arguments_2d=arguments_2d, adjm=adjm)
+            if len(argument_keys) > 0:
+                argument_loss, arguments_y_2d, argument_hat_1d, argument_hat_2d = model.predict_arguments(
+                    argument_hidden, argument_keys, arguments_2d, adjm)
+                # argument_loss = criterion(argument_logits, arguments_y_1d)
+                loss = trigger_loss + args.LOSS_alpha * argument_loss
+                # if i == 0:
 
-            if losses[1].item() == 0:
-                loss = losses[0]
+                #     print("=====sanity check for triggers======")
+                #     print('triggers_y_2d[0]:', triggers_y_2d[0])
+                #     print("trigger_hat_2d[0]:", trigger_hat_2d[0])
+
+                #     print("=======================")
+
+                #     print("=====sanity check for arguments======")
+                #     print('arguments_y_2d[0]:', arguments_y_2d[0])
+                #     print('argument_hat_1d[0]:', argument_hat_1d[0])
+                #     print("arguments_2d[0]:", arguments_2d)
+                #     print("argument_hat_2d[0]:", argument_hat_2d)
+                #     print("=======================")
+
             else:
-                loss = losses[0] + losses[1]
-
+                loss = trigger_loss
             # normalized mixed score? not used
-            if args.mix_loss_norm and model.config.forward_mode == 'Mix':
+            if args.mix_loss_norm and model.PreModel.config.forward_mode == 'Mix':
                 loss /= loss.item()
                 loss *= args.mix_loss_coe
 
-            ita = losses[2]
+            ita = model.get_ita()
             en_loss = torch.tensor(0.)
-            if task_ids[0] > 0 and model.config.forward_mode == 'Mix':
+            if task_ids[0] > 0 and model.PreModel.config.forward_mode == 'Mix':
                 en_loss = cal_entropy_loss(ita)
                 loss += en_loss * args.entropy_coe
 
-            train_once(loss, n_inputs)
+            cum_loss += loss.item()
+            if args.tbx:
+                writer.add_scalar(tbx_title+'train',loss.item(),tot_n_steps)
+            loss.backward()
 
-            qa_loss = losses[0].item() * n_inputs
-            lm_loss = losses[1].item() * n_inputs
-            cum_loss += loss.item() * n_inputs
-            cum_en_loss += en_loss.item() * args.entropy_coe * n_inputs
-            cum_qa_loss += qa_loss
-            cum_lm_loss += lm_loss
-            cur_n_inputs += n_inputs
+            optimizer.step()
+            scheduler.step()
+
+            #### 训练精度评估 ####
+            words_all.extend(words_2d)
+            triggers_all.extend(triggers_2d)
+            triggers_hat_all.extend(trigger_hat_2d.cpu().numpy().tolist())
+            arguments_all.extend(arguments_2d)
+
+            if len(argument_keys) > 0:
+                arguments_hat_all.extend(argument_hat_2d)
+            else:
+                batch_size = len(arguments_2d)
+                argument_hat_2d = [{'events': {}} for _ in range(batch_size)]
+                arguments_hat_all.extend(argument_hat_2d)
+
+            for ii, (words, triggers, triggers_hat, arguments, arguments_hat) in enumerate(
+                    zip(words_all, triggers_all, triggers_hat_all, arguments_all, arguments_hat_all)):
+                triggers_hat = triggers_hat[:len(words)]
+                triggers_hat = [idx2trigger[hat] for hat in triggers_hat]
+
+                # [(ith sentence, t_start, t_end, t_type_str)]
+                triggers_true.extend([(ii, *item) for item in find_triggers(triggers)])
+                triggers_pred.extend([(ii, *item) for item in find_triggers(triggers_hat)])
+
+                # [(ith sentence, t_start, t_end, t_type_str, a_start, a_end, a_type_idx)]
+                for trigger in arguments['events']:
+                    t_start, t_end, t_type_str = trigger
+                    for argument in arguments['events'][trigger]:
+                        a_start, a_end, a_type_idx = argument
+                        arguments_true.append((ii, t_start, t_end, t_type_str, a_start, a_end, a_type_idx))
+
+                for trigger in arguments_hat['events']:
+                    t_start, t_end, t_type_str = trigger
+                    for argument in arguments_hat['events'][trigger]:
+                        a_start, a_end, a_type_idx = argument
+                        arguments_pred.append((ii, t_start, t_end, t_type_str, a_start, a_end, a_type_idx))
 
             if args.constant_sch or task_ids[0] > 0:
-                lr = scheduler.get_lr()[0]
+                lr = scheduler.get_last_lr()[0]
             else:
-                lr = scheduler.get_lr()
+                lr = scheduler.get_last_lr()
 
-            if (n_steps + 1) % args.logging_steps == 0:
-                logger.info(
-                    'progress {:.3f} , lr {:.1E} , loss {:.3f} , qa loss {:.3f} , lm loss {:.3f} , en loss {:.3f}, avg batch size {:.1f}'
-                    .format(ep + cur_n_inputs / len(train_qadata),
-                            lr, cum_loss / cur_n_inputs,
-                            cum_qa_loss / cur_n_inputs, cum_lm_loss / cur_n_inputs,
-                            cum_en_loss / cur_n_inputs, cur_n_inputs / (n_steps + 1)))
+            if (n_steps) % args.logging_steps == 0:  # monitoring
+                trigger_p, trigger_r, trigger_f1 = calc_metric(triggers_true, triggers_pred)
+                argument_p, argument_r, argument_f1 = calc_metric(arguments_true, arguments_pred)
+                ## 100step 清零
+                words_all, triggers_all, triggers_hat_all, arguments_all, arguments_hat_all = [], [], [], [], []
+                triggers_true, triggers_pred, arguments_true, arguments_pred = [], [], [], []
+                #########################
+                if len(argument_keys) > 0:
+                    logger.info(
+                        "[Events Detected]step: {}, loss: {:.3f}, trigger_loss:{:.3f}, argument_loss:{:.3f}".format(
+                            n_steps,
+                            loss,
+                            trigger_loss.item(),
+                            argument_loss.item()) +
+                        '[trigger] P={:.3f}  R={:.3f}  F1={:.3f}'.format(trigger_p, trigger_r, trigger_f1) +
+                        '[argument] P={:.3f}  R={:.3f}  F1={:.3f}'.format(argument_p, argument_r, argument_f1)
+                    )
+                    cum_loss = 0
+                else:
+                    logger.info("[No Events Detected]step: {}, loss: {:.3f} ".format(n_steps, loss) +
+                                '[trigger] P={:.3f}  R={:.3f}  F1={:.3f}'.format(trigger_p, trigger_r, trigger_f1)
+                                )
+                    cum_loss = 0
+                pass
         if not args.gradient_debug:
-            tot_n_steps += (n_steps + 1)
-            validation(model, valid_dataloader)
-            '''logger.info('epoch {}/{} done , tot steps {} , loss {:.2f} , qa loss {:.2f} , lm loss {:.2f}, val loss {:.2f}, vqa loss {:.2f}, vlm loss {:.2f}, avg batch size {:.1f}'.format(
-                ep+1, n_train_epochs, tot_n_steps,
-                cum_loss/cur_n_inputs, cum_qa_loss/cur_n_inputs, 
-                cum_lm_loss/cur_n_inputs, val_loss,
-                val_qa_loss, val_lm_loss, cur_n_inputs/(n_steps+1)
-            ))'''
+            new_val_loss = validation(model, valid_dataloader)
+            if args.tbx:
+                writer.add_scalar(tbx_title + 'val', new_val_loss, tot_n_steps)
+            logger.info("valid loss: {}".format(new_val_loss))
+            early_stopping(new_val_loss)
+            if early_stopping.improving:
+                if os.path.exists(model_dir) and os.path.isdir(model_dir):
+                    shutil.rmtree(model_dir)
+                    os.mkdir(model_dir)
+                torch.save(model.state_dict(), os.path.join(model_dir, SAVE_NAME + "finish"))
+                adapter_list = model.PreModel.get_adapter_list()
+
+                np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
+                np.save(os.path.join(model_dir, "ita_list.npy"), torch.stack(model.get_detached_ita()).cpu())
+                np.save(os.path.join(model_dir, "uni_adapter.npy"), model.get_uni_adapter())
+                logger.info("BEST MODEL SAVED!")
+            if early_stopping.early_stop:
+                break
+
         logger.info("ITA:")
         logger.info(ita)
 
@@ -462,18 +543,25 @@ def Mix(task_ids, model):
             exit(0)
 
         if ep == args.warm_mix_step - 1:
-            model.config.forward_mode = 'Mix'
+            model.PreModel.config.forward_mode = 'Mix'
             for name, param in model.named_parameters():
                 if "ita" in name:
                     param.requires_grad = True
-
+    model = load_model(model_dir)
+    ita_list = np.load(os.path.join(model_dir, "ita_list.npy"), allow_pickle=True)
+    uni_adapter = np.load(os.path.join(model_dir, "uni_adapter.npy"), allow_pickle=True)
+    model.set_ita(ita_list)
+    model.set_uni_adapter(uni_adapter)
     if args.layer_debug:
         for i, layer_ita in enumerate(ita):
             if i == args.layer_debug_cnt:
                 layer_ita[1] = 1.0
 
     # Make decision on which adapter to use for the new task (in each layer)
-    cnt_true = model.setup_task_adapter(task_ids[0])
+    cnt_true = model.PreModel.setup_task_adapter(task_ids[0])
+    torch.save(model.state_dict(), os.path.join(model_dir, SAVE_NAME + "finish"))
+    adapter_list = model.PreModel.get_adapter_list()
+    np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
 
     if cnt_true > 0:
         fit_or_not = True
@@ -484,10 +572,7 @@ def Mix(task_ids, model):
     current_fit_epoch = None
     trans = True
 
-    torch.save(model.state_dict(), os.path.join(model_dir, SAVE_NAME + "finish"))
-    adapter_list = model.get_adapter_list()
-    np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
-    logger.info("MODEL SAVED!")
+
 
     del optimizer
     del scheduler
@@ -543,8 +628,8 @@ def Fit(task_ids, model, current_fit_epoch=None):
 
     logger.warning("In Fit, not using extra data now...")
     # train_qadata = QADataset(train_dataset, "train", SPECIAL_TOKEN_IDS[tasks[0]], train_extra_data)
-    train_qadata = QADataset(train_dataset, "train", SPECIAL_TOKEN_IDS[tasks[0]])
-    valid_qadata = QADataset(valid_dataset, "train", SPECIAL_TOKEN_IDS[tasks[0]])
+    train_qadata = ACE2005Dataset(train_dataset, task_ids[0])
+    valid_qadata = ACE2005Dataset(valid_dataset, task_ids[0])
 
     max_train_batch_size = args.z_max_batch_size
     train_dataloader = create_dataloader(train_qadata, "train", max_train_batch_size)
@@ -649,7 +734,7 @@ def Fit(task_ids, model, current_fit_epoch=None):
 
 
 # Training stage
-def Transfer(task_ids, model, fit_bonus=0, net=None):
+def Transfer(task_ids, model, fit_bonus=0):
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -663,23 +748,25 @@ def Transfer(task_ids, model, fit_bonus=0, net=None):
     if not args.generate_after:
         if ("lll" in args.seq_train_type or "llewc" in args.seq_train_type) and task_ids[
             0] > 0 and not args.pseudo_ablation:
-            adapter_list = np.load(os.path.join(model_dir, "adapter_list.npy"))
+            adapter_list = np.load(os.path.join(model_dir, "adapter_list.npy"), allow_pickle=True)
             replay = []
             for layer_list in adapter_list:
-                c_module = layer_list[task_ids[0]]
+                c_module = layer_list["adapter_function"][task_ids[0]]
                 for i in range(task_ids[0]):
-                    if layer_list[i] == c_module:
+                    if layer_list["adapter_function"][i] == c_module:
                         if i not in replay:
                             replay.append(i)
             # only replay those tasks which share modules with the current task
             logger.info("replay tasks: {}".format(replay))
 
             if len(replay) > 0:
-                prev_task = args.tasks[task_ids[0] - 1]
-                model.config.forward_mode = 'Transfer'
-                model.config.testing = False
+                # TODO Add experience replay
+                '''prev_task = args.tasks[task_ids[0] - 1]
+                model.PreModel.config.forward_mode = 'Transfer'
+                model.PreModel.config.testing = False
                 with torch.no_grad():
-                    create_extra_data(tasks[0], prev_task, model, train_extra_data, None, None, replay)
+                    create_extra_data(tasks[0], prev_task, model, train_extra_data, None, None, replay)'''
+            pass
 
         logger.info('extra training data size: {}'.format(len(train_extra_data)))
     # prepare for transfer
@@ -716,39 +803,39 @@ def Transfer(task_ids, model, fit_bonus=0, net=None):
         if not args.fp32:
             logger.info("Not support fp32 on mytransformers/adapters now...")
             exit(0)
-            # model = FP16_Module(model)
-    else:
-        if args.load_model_for_stage:
-            prev_tasks = [args.tasks[task_ids[0] - 1]]
-            prev_model_dir = get_model_dir(prev_tasks)
-            model = load_model(prev_model_dir)
-
-            adapter_list = np.load(os.path.join(model_dir, "adapter_list.npy"))
-            model.update_adapter_list(adapter_list)
-        else:
-            load_model(model_dir)
-
-        model.config.forward_mode = 'Transfer'
-        model.config.testing = False
-
-        if args.partial_learn:
-            model.train_adapter(str(task_ids[0]))
-        elif args.partial_transfer:
-            model.adapter_transfer()
-        else:
-            adapter_list = np.load(os.path.join(model_dir, "adapter_list.npy"))
-            adapter_names = np.unique(adapter_list)
-            model.train_adapter([str(i) for i in adapter_names])
-
-        model.cuda()
-        if args.clear_model:
-            model = clear(model)
-    if net is None:
         net = Net(trigger_size=len(all_triggers), PreModel=model, entity_size=len(all_entities),
                   all_postags=len(all_postags),
                   argument_size=len(all_arguments), device=args.device_ids[0], idx2trigger=idx2trigger)
-        param_opt = learnable_para_calculate(net, "whole", True)
+
         net.cuda()
+        # model = FP16_Module(model)
+    else:
+
+        prev_tasks = [args.tasks[task_ids[0]]]
+        prev_model_dir = get_model_dir(prev_tasks)
+        model = load_model(prev_model_dir)
+
+
+        model.PreModel.config.forward_mode = 'Transfer'
+        model.PreModel.config.testing = False
+
+        if args.partial_learn:
+            model.PreModel.train_adapter(str(task_ids[0]))
+        elif args.partial_transfer:
+            model.PreModel.adapter_transfer()
+        else:
+            adapter_list = list(map(lambda x:x['adapter_function'][len(x['adapter_function']) - 1],np.load(os.path.join(model_dir, "adapter_list.npy"),allow_pickle=True)))
+
+            model.PreModel.train_adapter([str(i) for i in adapter_list])
+
+        net = model
+        model = model.PreModel
+        model.cuda()
+
+        if args.clear_model:
+            model = clear(model)
+    param_opt = learnable_para_calculate(net, "whole", True)
+
     """
     if args.generate_after:
         if ("lll" in args.seq_train_type or "llewc" in args.seq_train_type) and task_ids[0] > 0 and not args.pseudo_ablation:
@@ -849,8 +936,8 @@ def Transfer(task_ids, model, fit_bonus=0, net=None):
             c_name = []
             for layer, j in enumerate(o_path):
                 c_layer_name = j[i]
-                c_name.append('.' + str(layer) + '.attention_adapters.adapters.' + c_layer_name + '.')
-                c_name.append('.' + str(layer) + '.output_adapters.adapters.' + c_layer_name + '.')
+                c_name.append('.' + str(layer) + '.attention.output.adapters.' + c_layer_name + '.')
+                c_name.append('.' + str(layer) + '.output.adapters.' + c_layer_name + '.')
             path_one = []
             path_two = []
             for n, p in param_optimizer:
@@ -883,7 +970,8 @@ def Transfer(task_ids, model, fit_bonus=0, net=None):
                 shared.append(False)
         logger.info("shared: {}".format(shared))
     from early_stop import EarlyStopping
-    early_stopping = EarlyStopping(patience=20, verbose=True, trace_func=lambda x: logger.info(x))
+    early_stopping = EarlyStopping(patience=5, verbose=True, trace_func=lambda x: logger.info(x))
+    tbx_title = 'transfer_'+str(task_ids[0])+'/'
     for ep in range(n_train_epochs):
         logger.info("Epoch {}".format(ep))
         # model.train()
@@ -894,6 +982,7 @@ def Transfer(task_ids, model, fit_bonus=0, net=None):
         cum_loss = 0
 
         for n_steps, batch in tqdm.tqdm(enumerate(train_dataloader)):
+            tot_n_steps+=1
             net.zero_grad()
             optimizer.zero_grad()
             tokens_x_2d, entities_x_3d, postags_x_2d, triggers_y_2d, arguments_2d, seqlens_1d, head_indexes_2d, words_2d, triggers_2d, adjm, task_id = batch
@@ -911,6 +1000,7 @@ def Transfer(task_ids, model, fit_bonus=0, net=None):
 
             if task_ids[0] > 0:
                 if not shared[task_id[0]]:
+                    logger.info("no shared, skipping")
                     continue
             model.config.batch_task_id = task_id[0]
             trigger_loss, triggers_y_2d, trigger_hat_2d, argument_hidden, argument_keys = net.predict_triggers(
@@ -940,6 +1030,8 @@ def Transfer(task_ids, model, fit_bonus=0, net=None):
             else:
                 loss = trigger_loss
             cum_loss += loss.item()
+            if args.tbx:
+                writer.add_scalar(tbx_title+'train',loss.item(),tot_n_steps)
             nn.utils.clip_grad_norm_(net.parameters(), 3.0)
             loss.backward()
 
@@ -1042,7 +1134,7 @@ def Transfer(task_ids, model, fit_bonus=0, net=None):
                             argument_loss.item()) +
                         '[trigger] P={:.3f}  R={:.3f}  F1={:.3f}'.format(trigger_p, trigger_r, trigger_f1) +
                         '[argument] P={:.3f}  R={:.3f}  F1={:.3f}'.format(argument_p, argument_r, argument_f1)
-                        )
+                    )
                     cum_loss = 0
                 else:
                     logger.info("[No Events Detected]step: {}, loss: {:.3f} ".format(n_steps, loss) +
@@ -1052,10 +1144,19 @@ def Transfer(task_ids, model, fit_bonus=0, net=None):
                 pass
 
         if not args.gradient_debug:
-            tot_n_steps += (n_steps + 1)
             new_val_loss = validation(net, valid_dataloader)
+            if args.tbx:
+                writer.add_scalar(tbx_title+'val', new_val_loss,tot_n_steps)
             logger.info("valid loss: {}".format(new_val_loss))
             early_stopping(new_val_loss)
+            if early_stopping.improving:
+                if os.path.exists(model_dir) and os.path.isdir(model_dir):
+                    shutil.rmtree(model_dir)
+                    os.mkdir(model_dir)
+                torch.save(net.state_dict(), os.path.join(model_dir, SAVE_NAME + "finish"))
+                adapter_list = model.get_adapter_list()
+                np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
+                logger.info("BEST MODEL SAVED!")
             if early_stopping.early_stop:
                 break
             '''logger.info('epoch {}/{} done , tot steps {} , loss {:.2f} , qa loss {:.2f} , lm loss {:.2f}, val loss {:.2f}, vqa loss {:.2f}, vlm loss {:.2f}, avg batch size {:.1f}'.format(
@@ -1068,11 +1169,8 @@ def Transfer(task_ids, model, fit_bonus=0, net=None):
         print_para(model)
         if args.gradient_debug and task_ids[0] > 0:
             exit(0)
+    model = load_model(model_dir)
 
-    torch.save(net.state_dict(), os.path.join(model_dir, SAVE_NAME + "finish"))
-    adapter_list = model.get_adapter_list()
-    np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
-    logger.info("MODEL SAVED!")
 
     del optimizer
     del scheduler
@@ -1100,6 +1198,11 @@ def Transfer(task_ids, model, fit_bonus=0, net=None):
 
 
 if __name__ == '__main__':
+    global writer
+    if args.tbx:
+        logger.info("Using TensorBoardX")
+        from tensorboardX import SummaryWriter
+        writer = SummaryWriter()
     '''import builtins
     from inspect import getframeinfo, stack
 
@@ -1164,7 +1267,7 @@ if __name__ == '__main__':
             if args.z_debug_start_from_trans:
                 tasks = [args.tasks[args.z_debug_tsk_num]]
 
-            model,adapter_list = load_model(get_model_dir(tasks),return_adapter_list=True)
+            model, adapter_list = load_model(get_model_dir(tasks), return_adapter_list=True)
 
             global TOKENS_WEIGHT
             tsk_cnt = 0
@@ -1191,10 +1294,12 @@ if __name__ == '__main__':
             # Recover training from one task
             elif task_id == args.z_debug_tsk_num and args.z_debug_start_from_trans:
                 fit_bonus = 0
-                model.config.forward_mode = 'Transfer'
-                model.config.testing = False
-                adapter_names = np.unique(adapter_list)
-                model.train_adapter([str(i) for i in adapter_names])
+                model.PreModel.config.forward_mode = 'Transfer'
+                model.PreModel.config.testing = False
+                adapter_list = list(map(lambda x: x['adapter_function'][len(x['adapter_function']) - 1],
+                                        adapter_list))
+
+                model.PreModel.train_adapter([str(i) for i in adapter_list])
 
                 model = Transfer([task_id], model, fit_bonus)
             # not the first task

@@ -160,6 +160,12 @@ class BertModelAdaptersMixin(InvertibleAdaptersMixin, ModelAdaptersMixin):
                     reg_loss += 0.01 * (target - layer_fusion.value.weight).pow(2).sum()
         return reg_loss
 
+    def get_path(self):
+        path = []
+        for i, layer in enumerate(self.encoder.layer):
+            path.append(layer.adapter_function)
+        return path
+
     def get_adapter(self, name):
         return_adapters = {}
         for idx, layer in enumerate(self.encoder.layer):
@@ -196,6 +202,12 @@ class BertModelAdaptersMixin(InvertibleAdaptersMixin, ModelAdaptersMixin):
                 cnt_true += 1
         return cnt_true
     def add_adapter_by_list(self, adapter_list: list, config=None):
+        names=[]
+        for layer_adapter in adapter_list:
+            for ada in layer_adapter["adapter_function"]:
+                if ada not in names:
+                    names.append(ada)
+                    self.config.adapters.add(ada, config=config)
         for i, layer in enumerate(self.encoder.layer):
             layer.attention.output.adapters = adapter_list[i]["attention"]
             layer.output.adapters = adapter_list[i]["output"]

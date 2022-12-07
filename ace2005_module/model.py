@@ -184,7 +184,27 @@ class Net(nn.Module):
         return trigger_loss, triggers_y_2d, trigger_hat_2d, sen_mask_id, argument_keys
 
 
-
+    def get_ita(self):
+        ita_list = []
+        for block in self.PreModel.encoder.layer:
+            ita_list.append(block.ita)
+        return ita_list
+    def get_detached_ita(self):
+        ita_list = []
+        for block in self.PreModel.encoder.layer:
+            ita_list.append(block.ita.detach())
+        return ita_list
+    def get_uni_adapter(self):
+        uni_adapter = []
+        for block in self.PreModel.encoder.layer:
+            uni_adapter.append(block.uni_adapter)
+        return uni_adapter
+    def set_uni_adapter(self,ita_list):
+        for ita,block in zip(ita_list,self.PreModel.encoder.layer):
+            block.uni_adapter = ita
+    def set_ita(self,ita_list):
+        for ita,block in zip(ita_list,self.PreModel.encoder.layer):
+            block.ita = ita
     def predict_arguments(self, sen_mask_id, argument_keys, arguments_2d, adjm):
         def get_sentence_positional_feature(self, argument_keys, seq_len):
             '''
