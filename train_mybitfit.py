@@ -60,8 +60,14 @@ def load_pre_adapter(model, newname):
 
 # Calculate the entropy for weight coefficient
 def cal_entropy_loss(ita):
-    entropy_loss = torch.tensor(0.0, device="cuda")
-    for item in ita:
+    ita = torch.stack(ita)
+    ita = ita / args.select_temp
+    dis = torch.nn.functional.softmax(ita, dim=1)
+    #entropy_loss = args.last_dim_coe * (dis[-1][0] - 0.0) ** 2
+    log_dis = torch.log(dis)
+    entropy_loss = -torch.sum(dis * log_dis,dim=1)
+    return entropy_loss.sum()
+    '''for item in ita:
         # temperature, not used
         item = item / args.select_temp
 
@@ -71,7 +77,7 @@ def cal_entropy_loss(ita):
 
         log_dis = torch.log(dis)
         entropy_loss += - torch.sum(dis * log_dis)
-    return entropy_loss
+    return entropy_loss'''
 
 
 def freeze_for_mix(model):
@@ -380,7 +386,7 @@ def Mix(task_ids, model):
 
     logger.info("USE ARGS.ADAM_EPSILON NOW.....")
     # logger.info("USE ARGS.ADAM_EPSILON NOW.....")
-    optimizer = Adam(optimizer_grouped_parameters, lr=args.z_train_lrs[task_ids[0]], weight_decay=args.l2)
+    optimizer = AdamW(optimizer_grouped_parameters, lr=args.z_train_lrs[task_ids[0]], weight_decay=args.l2)
     logger.info("Start to use constant scheduler!")
     scheduler = get_constant_schedule_with_warmup(optimizer, args.z_warmup_step)
 
@@ -390,7 +396,7 @@ def Mix(task_ids, model):
     mix_flag = 0
     from early_stop import EarlyStopping
     tbx_title = 'mix_' + str(task_ids[0]) + '/'
-    early_stopping = EarlyStopping(patience=5, verbose=True, trace_func=lambda x: logger.info(x))
+    early_stopping = EarlyStopping(patience=10, verbose=True, trace_func=lambda x: logger.info(x))
     for ep in range(n_train_epochs):
         logger.info("Epoch {}".format(ep))
         model.train()
@@ -448,7 +454,7 @@ def Mix(task_ids, model):
                 writer.add_scalar(tbx_title+'train',loss.item(),tot_n_steps)
             loss.backward()
 
-            optimizer.step()
+            optimizer.step(None)
             scheduler.step()
 
             #### 训练精度评估 ####
@@ -811,9 +817,9 @@ def Transfer(task_ids, model, fit_bonus=0):
         # model = FP16_Module(model)
     else:
 
-        prev_tasks = [args.tasks[task_ids[0]]]
-        prev_model_dir = get_model_dir(prev_tasks)
-        model = load_model(prev_model_dir)
+        current_tasks = [args.tasks[task_ids[0]]]
+        current_model_dir = get_model_dir(current_tasks)
+        model = load_model(current_model_dir)
 
 
         model.PreModel.config.forward_mode = 'Transfer'
@@ -901,7 +907,7 @@ def Transfer(task_ids, model, fit_bonus=0):
     logger.info(optimizer_grouped_names)
 
     # logger.info("USE ARGS.ADAM_EPSILON NOW.....")
-    optimizer = Adam(optimizer_grouped_parameters, lr=args.z_train_lrs[task_ids[0]], weight_decay=args.l2)
+    optimizer = AdamW(optimizer_grouped_parameters, lr=args.z_train_lrs[task_ids[0]], weight_decay=args.l2)
 
     if args.constant_sch:
         logger.info("Start to use constant scheduler!")
@@ -1035,7 +1041,7 @@ def Transfer(task_ids, model, fit_bonus=0):
             nn.utils.clip_grad_norm_(net.parameters(), 3.0)
             loss.backward()
 
-            optimizer.step()
+            optimizer.step( path[model.config.batch_task_id])
             scheduler.step()
 
             # if i == 0:

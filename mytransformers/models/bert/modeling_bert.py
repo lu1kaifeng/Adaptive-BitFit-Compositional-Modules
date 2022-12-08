@@ -20,6 +20,8 @@ import os
 import warnings
 from dataclasses import dataclass
 from typing import Optional, Tuple
+
+import numpy as np
 import torch
 import torch.utils.checkpoint
 from torch import nn
@@ -442,6 +444,8 @@ class BertOutput(BertOutputAdaptersMixin, nn.Module):
 class BertLayer(BertLayerAdaptersMixin, nn.Module):
     def __init__(self, config):
         super().__init__()
+        self.ita = None
+        self.uni_adapter = None
         self.config = config
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
         self.seq_len_dim = 1
@@ -465,6 +469,7 @@ class BertLayer(BertLayerAdaptersMixin, nn.Module):
             past_key_value=None,
             output_attentions=False,
     ):
+
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
         self_attention_outputs = self.attention(
@@ -475,7 +480,11 @@ class BertLayer(BertLayerAdaptersMixin, nn.Module):
             past_key_value=self_attn_past_key_value,
         )
         attention_output = self_attention_outputs[0]
-
+        if self.uni_adapter is None:
+            self.uni_adapter = np.unique(self.adapter_function)
+        hidden_states = self.attention.output.mix_adapters_forward(attention_output, hidden_states, self.ita,
+                                                                     self.config.batch_task_id, self.config.forward_mode,
+                                                                     self.uni_adapter, self.adapter_function)
         # if decoder, the last output is tuple of self-attn cache
         if self.is_decoder:
             outputs = self_attention_outputs[1:-1]
@@ -492,7 +501,7 @@ class BertLayer(BertLayerAdaptersMixin, nn.Module):
             # cross_attn cached key/values tuple is at positions 3,4 of past_key_value tuple
             cross_attn_past_key_value = past_key_value[-2:] if past_key_value is not None else None
             cross_attention_outputs = self.crossattention(
-                attention_output,
+                hidden_states,
                 attention_mask,
                 head_mask,
                 encoder_hidden_states,
@@ -501,6 +510,7 @@ class BertLayer(BertLayerAdaptersMixin, nn.Module):
                 output_attentions,
             )
             attention_output = cross_attention_outputs[0]
+            hidden_states = hidden_states + attention_output
             outputs = outputs + cross_attention_outputs[1:-1]  # add cross attentions if we output attention weights
 
             # add cross-attn cache to positions 3,4 of present_key_value tuple
@@ -508,8 +518,11 @@ class BertLayer(BertLayerAdaptersMixin, nn.Module):
             present_key_value = present_key_value + cross_attn_present_key_value
 
         layer_output = apply_chunking_to_forward(
-            self.feed_forward_chunk, self.chunk_size_feed_forward, self.seq_len_dim, attention_output
+            self.feed_forward_chunk, self.chunk_size_feed_forward, self.seq_len_dim, hidden_states
         )
+        layer_output = self.output.mix_adapters_forward(layer_output, hidden_states, self.ita,
+                                                                     self.config.batch_task_id, self.config.forward_mode,
+                                                                     self.uni_adapter, self.adapter_function)
         outputs = (layer_output,) + outputs
 
         # if decoder, return the attn key/values as the last output
