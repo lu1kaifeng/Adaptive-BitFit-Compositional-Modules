@@ -38,5 +38,6 @@ class EarlyStopping:
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
+            self.improving = True
             self.best_score = score
             self.counter = 0

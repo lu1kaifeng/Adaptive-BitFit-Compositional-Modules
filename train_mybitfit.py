@@ -60,7 +60,7 @@ def load_pre_adapter(model, newname):
 
 # Calculate the entropy for weight coefficient
 def cal_entropy_loss(ita):
-    ita = torch.stack(ita)
+    #ita = torch.stack(ita)
     ita = ita / args.select_temp
     dis = torch.nn.functional.softmax(ita, dim=1)
     #entropy_loss = args.last_dim_coe * (dis[-1][0] - 0.0) ** 2
@@ -456,7 +456,7 @@ def Mix(task_ids, model):
 
             optimizer.step(None)
             scheduler.step()
-
+            detached_ita = ita.detach().cpu()
             #### 训练精度评估 ####
             words_all.extend(words_2d)
             triggers_all.extend(triggers_2d)
@@ -535,7 +535,7 @@ def Mix(task_ids, model):
                 adapter_list = model.PreModel.get_adapter_list()
 
                 np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
-                np.save(os.path.join(model_dir, "ita_list.npy"), torch.stack(model.get_detached_ita()).cpu())
+                np.save(os.path.join(model_dir, "ita_list.npy"), detached_ita)
                 np.save(os.path.join(model_dir, "uni_adapter.npy"), model.get_uni_adapter())
                 logger.info("BEST MODEL SAVED!")
             if early_stopping.early_stop:
@@ -570,7 +570,8 @@ def Mix(task_ids, model):
     np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
 
     if cnt_true > 0:
-        fit_or_not = True
+        #fit_or_not = True
+        fit_or_not = False
     else:
         fit_or_not = False
 
