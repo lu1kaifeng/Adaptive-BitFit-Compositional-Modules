@@ -225,7 +225,10 @@ class ModelAdaptersMixin(ABC):
         if isinstance(config, dict):
             config = AdapterConfig.from_dict(config)  # ensure config is ok and up-to-date
         self.config.adapters.add(adapter_name, config=config)
-        self.base_model._add_adapter(adapter_name)
+        names = self.base_model._add_adapter(adapter_name)
+        for n in names:
+            self.config.adapters.add(n, config=config)
+        return names
 
     def add_fusion(self, adapter_names: Union[Fuse, list], adapter_fusion_config=None, override_kwargs=None):
         """

@@ -39,9 +39,9 @@ class AdapterLayerBaseMixin(ABC):
         self.adapters = nn.ModuleDict(dict())
         self.adapter_fusion_layer = nn.ModuleDict(dict())
 
-    def add_adapter(self, adapter_name: str, layer_idx: int):
+    def add_adapter(self, adapter_name: str, layer_idx: int,group_name: str):
         self.layer_idx = layer_idx
-        adapter_config = self.config.adapters.get(adapter_name)
+        adapter_config = self.config.adapters.get(group_name)
         if adapter_config and adapter_config.get(self.adapter_config_key, None):
             reduction_factor = adapter_config["reduction_factor"]
             if isinstance(reduction_factor, Mapping):

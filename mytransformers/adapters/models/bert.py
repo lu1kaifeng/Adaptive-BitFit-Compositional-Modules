@@ -43,9 +43,9 @@ class BertLayerAdaptersMixin:
         self.attention.output.add_fusion_layer(adapter_names)
         self.output.add_fusion_layer(adapter_names)
 
-    def add_adapter(self, adapter_name: str, layer_idx: int):
-        self.attention.output.add_adapter(adapter_name, layer_idx)
-        self.output.add_adapter(adapter_name, layer_idx)
+    def add_adapter(self, adapter_name: str, layer_idx: int,group_name):
+        self.attention.output.add_adapter(adapter_name, layer_idx,group_name)
+        self.output.add_adapter(adapter_name, layer_idx,group_name)
         self.adapter_function.append(adapter_name)
 
     def enable_adapters(
@@ -93,11 +93,13 @@ class BertEncoderAdaptersMixin:
 
     def add_adapter(self, adapter_name: str):
         adapter_config = self.config.adapters.get(adapter_name)
+        added_adapter_names = []
         leave_out = adapter_config.get("leave_out", [])
         for i, layer in enumerate(self.layer):
             if i not in leave_out:
-                layer.add_adapter(adapter_name, i)
-
+                layer.add_adapter('task'+adapter_name+'layer'+str(i), i,adapter_name)
+                added_adapter_names.append('task'+adapter_name+'layer'+str(i))
+        return added_adapter_names
     def enable_adapters(
         self, adapter_setup: AdapterCompositionBlock, unfreeze_adapters: bool, unfreeze_attention: bool
     ):
@@ -139,8 +141,9 @@ class BertModelAdaptersMixin(InvertibleAdaptersMixin, ModelAdaptersMixin):
         # TODO implement fusion for invertible adapters
 
     def _add_adapter(self, adapter_name):
-        self.encoder.add_adapter(adapter_name)
+        name_list = self.encoder.add_adapter(adapter_name)
         self.add_invertible_adapter(adapter_name)
+        return name_list
 
     def _add_fusion_layer(self, adapter_names):
         self.encoder.add_fusion_layer(adapter_names)

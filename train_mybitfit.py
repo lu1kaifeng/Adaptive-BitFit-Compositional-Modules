@@ -67,17 +67,7 @@ def cal_entropy_loss(ita):
     log_dis = torch.log(dis)
     entropy_loss = -torch.sum(dis * log_dis,dim=1)
     return entropy_loss.sum()
-    '''for item in ita:
-        # temperature, not used
-        item = item / args.select_temp
 
-        dis = torch.nn.functional.softmax(item, dim=0)
-        # regularization on the last coefficient, not used
-        entropy_loss += args.last_dim_coe * (dis[-1][0] - 0.0) ** 2
-
-        log_dis = torch.log(dis)
-        entropy_loss += - torch.sum(dis * log_dis)
-    return entropy_loss'''
 
 
 def freeze_for_mix(model):
@@ -329,10 +319,10 @@ def Mix(task_ids, model):
     model.PreModel.config.forward_mode = 'Mix'
     model.PreModel.config.testing = False
     model.PreModel.config.mix_ini = args.mix_ini
-    model.PreModel.add_adapter(str(task_ids[0]), config=args.adapt_type)
+    names_to_train = model.PreModel.add_adapter(str(task_ids[0]), config=args.adapt_type)
     if args.pretrain_adapter:
         load_pre_adapter(model, str(task_ids[0]))
-    model.PreModel.train_adapter(str(task_ids[0]))
+    model.PreModel.train_adapter(names_to_train)
     model.cuda()
 
     if args.clear_model:
@@ -340,18 +330,7 @@ def Mix(task_ids, model):
 
     param_opt = learnable_para_calculate(model, "whole", True)
 
-    '''gen_token = get_gen_token(tasks[0])
-    TOKENIZER.add_tokens([gen_token])
-    TOKENIZER.save_pretrained(model_dir)
-    SPECIAL_TOKENS[tasks[0]] = gen_token
-    SPECIAL_TOKEN_IDS[tasks[0]] = TOKENIZER.convert_tokens_to_ids(gen_token)
-    logger.info('gen token = {} , gen token id = {}'.format(gen_token, SPECIAL_TOKEN_IDS[tasks[0]]))
-    MODEL_CONFIG.vocab_size = len(TOKENIZER)
-    MODEL_CONFIG.to_json_file(os.path.join(model_dir,CONFIG_NAME))
-    global TOKENS_WEIGHT
-    while 50260 + len(args.tasks) != TOKENS_WEIGHT.shape[0]:
-        TOKENS_WEIGHT = torch.cat((TOKENS_WEIGHT, torch.ones([1]).cuda()))
-        logger.info("Add one dim weight!")'''
+
 
     if not args.fp32:  # again because resize_token_embeddings makes embedding layer fp32
         model = FP16_Module(model)
@@ -795,14 +774,14 @@ def Transfer(task_ids, model, fit_bonus=0):
 
         model.config.forward_mode = 'Transfer'
         model.config.testing = False
-        model.add_adapter(str(task_ids[0]), config=args.adapt_type)
+        names_to_train = model.add_adapter(str(task_ids[0]), config=args.adapt_type)
         if args.pretrain_adapter:
             load_pre_adapter(model, str(task_ids[0]))
 
         if not args.adapterdrop:
-            model.train_adapter(str(task_ids[0]))
+            model.train_adapter(names_to_train)
         else:
-            model.train_adapter(str(task_ids[0]), [0, 1, 2])
+            model.train_adapter(names_to_train, [0, 1, 2])
         model.cuda()
         if args.clear_model:
             model = clear(model)
@@ -831,7 +810,7 @@ def Transfer(task_ids, model, fit_bonus=0):
         elif args.partial_transfer:
             model.PreModel.adapter_transfer()
         else:
-            adapter_list = list(map(lambda x:x['adapter_function'][len(x['adapter_function']) - 1],np.load(os.path.join(model_dir, "adapter_list.npy"),allow_pickle=True)))
+            adapter_list = set(map(lambda x:x['adapter_function'][len(x['adapter_function']) - 1],np.load(os.path.join(model_dir, "adapter_list.npy"),allow_pickle=True)))
 
             model.PreModel.train_adapter([str(i) for i in adapter_list])
 
@@ -977,7 +956,7 @@ def Transfer(task_ids, model, fit_bonus=0):
                 shared.append(False)
         logger.info("shared: {}".format(shared))
     from early_stop import EarlyStopping
-    early_stopping = EarlyStopping(patience=5, verbose=True, trace_func=lambda x: logger.info(x))
+    early_stopping = EarlyStopping(patience=10, verbose=True, trace_func=lambda x: logger.info(x))
     tbx_title = 'transfer_'+str(task_ids[0])+'/'
     for ep in range(n_train_epochs):
         logger.info("Epoch {}".format(ep))
@@ -1045,19 +1024,6 @@ def Transfer(task_ids, model, fit_bonus=0):
             optimizer.step( path[model.config.batch_task_id])
             scheduler.step()
 
-            # if i == 0:
-            #     print("=====sanity check======")
-            #     print("tokens_x_2d[0]:", tokenizer.convert_ids_to_tokens(tokens_x_2d[0])[:seqlens_1d[0]])
-            #     print("entities_x_3d[0]:", entities_x_3d[0][:seqlens_1d[0]])
-            #     print("postags_x_2d[0]:", postags_x_2d[0][:seqlens_1d[0]])
-            #     print("head_indexes_2d[0]:", head_indexes_2d[0][:seqlens_1d[0]])
-            #     print("triggers_2d[0]:", triggers_2d[0])
-            #     print("triggers_y_2d[0]:", triggers_y_2d.cpu().numpy().tolist()[0][:seqlens_1d[0]])
-            #     print('trigger_hat_2d[0]:', trigger_hat_2d.cpu().numpy().tolist()[0][:seqlens_1d[0]])
-            #     print("seqlens_1d[0]:", seqlens_1d[0])
-            #     print("arguments_2d[0]:", arguments_2d[0])
-            #     print("=======================")
-
             #### 训练精度评估 ####
             words_all.extend(words_2d)
             triggers_all.extend(triggers_2d)
@@ -1118,12 +1084,6 @@ def Transfer(task_ids, model, fit_bonus=0):
             else:
                 lr = scheduler.get_lr()
 
-            '''if (n_steps + 1) % args.logging_steps == 0:
-                logger.info('progress {:.3f} , lr {:.1E} , loss {:.3f} , qa loss {:.3f} , lm loss {:.3f}, avg batch size {:.1f}'
-                            .format(ep + cur_n_inputs/len(train_qadata),
-                                    lr, cum_loss/cur_n_inputs,
-                                    cum_qa_loss/cur_n_inputs, cum_lm_loss/cur_n_inputs,
-                                    cur_n_inputs/(n_steps + 1)))'''
 
             if (n_steps) % args.logging_steps == 0:  # monitoring
                 trigger_p, trigger_r, trigger_f1 = calc_metric(triggers_true, triggers_pred)
@@ -1166,12 +1126,6 @@ def Transfer(task_ids, model, fit_bonus=0):
                 logger.info("BEST MODEL SAVED!")
             if early_stopping.early_stop:
                 break
-            '''logger.info('epoch {}/{} done , tot steps {} , loss {:.2f} , qa loss {:.2f} , lm loss {:.2f}, val loss {:.2f}, vqa loss {:.2f}, vlm loss {:.2f}, avg batch size {:.1f}'.format(
-                ep+1, n_train_epochs, tot_n_steps,
-                cum_loss/cur_n_inputs, cum_qa_loss/cur_n_inputs, 
-                cum_lm_loss/cur_n_inputs, val_loss,
-                val_qa_loss, val_lm_loss, cur_n_inputs/(n_steps+1)
-            ))'''
 
         print_para(model)
         if args.gradient_debug and task_ids[0] > 0:
