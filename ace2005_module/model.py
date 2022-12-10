@@ -188,11 +188,6 @@ class Net(nn.Module):
         ita_list = []
         for block in self.PreModel.encoder.layer:
             ita_list.append(block.ita)
-        return torch.stack(ita_list)
-    def get_detached_ita(self):
-        ita_list = []
-        for block in self.PreModel.encoder.layer:
-            ita_list.append(block.ita.detach())
         return ita_list
     def get_uni_adapter(self):
         uni_adapter = []

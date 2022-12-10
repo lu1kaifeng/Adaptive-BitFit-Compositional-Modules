@@ -189,7 +189,7 @@ def parse_args():
     parser.add_argument("--top_two", action="store_true")
     parser.add_argument("--entropy_coe", type=float, default=0.01, help='entropy loss coe')
     parser.add_argument("--load_old", action="store_true")
-    parser.add_argument("--mix_ini", type=float, default=0.05, help='weight initialization')
+    parser.add_argument("--mix_ini", type=float, default=0.001, help='weight initialization')
 
     parser.add_argument("--gradient_debug", action="store_true")
     parser.add_argument("--whole_optim", action="store_true")

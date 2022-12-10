@@ -57,16 +57,20 @@ def load_pre_adapter(model, newname):
     m, n = model.load_state_dict(new_state_dict, strict=False)
     logger.info("Load old adapter weight to new adapter weight, Unexpected: {}".format(n))
 
-
 # Calculate the entropy for weight coefficient
 def cal_entropy_loss(ita):
-    #ita = torch.stack(ita)
-    ita = ita / args.select_temp
-    dis = torch.nn.functional.softmax(ita, dim=1)
-    #entropy_loss = args.last_dim_coe * (dis[-1][0] - 0.0) ** 2
-    log_dis = torch.log(dis)
-    entropy_loss = -torch.sum(dis * log_dis,dim=1)
-    return entropy_loss.sum()
+    entropy_loss = torch.tensor(0.0, device="cuda")
+    for item in ita:
+        # temperature, not used
+        item = item / args.select_temp
+
+        dis = torch.nn.functional.softmax(item, dim=0)
+        # regularization on the last coefficient, not used
+        entropy_loss += args.last_dim_coe * (dis[-1][0] - 0.0) ** 2
+
+        log_dis = torch.log(dis)
+        entropy_loss += - torch.sum(dis * log_dis)
+    return entropy_loss
 
 
 
@@ -375,7 +379,7 @@ def Mix(task_ids, model):
     mix_flag = 0
     from early_stop import EarlyStopping
     tbx_title = 'mix_' + str(task_ids[0]) + '/'
-    early_stopping = EarlyStopping(patience=10, verbose=True, trace_func=lambda x: logger.info(x))
+    early_stopping = EarlyStopping(patience=15, verbose=True, trace_func=lambda x: logger.info(x))
     for ep in range(n_train_epochs):
         logger.info("Epoch {}".format(ep))
         model.train()
@@ -435,7 +439,7 @@ def Mix(task_ids, model):
 
             optimizer.step(None)
             scheduler.step()
-            detached_ita = ita.detach().cpu()
+            detached_ita = list(map(lambda x:x.detach().cpu(),ita))
             #### 训练精度评估 ####
             words_all.extend(words_2d)
             triggers_all.extend(triggers_2d)
@@ -956,7 +960,7 @@ def Transfer(task_ids, model, fit_bonus=0):
                 shared.append(False)
         logger.info("shared: {}".format(shared))
     from early_stop import EarlyStopping
-    early_stopping = EarlyStopping(patience=10, verbose=True, trace_func=lambda x: logger.info(x))
+    early_stopping = EarlyStopping(patience=15, verbose=True, trace_func=lambda x: logger.info(x))
     tbx_title = 'transfer_'+str(task_ids[0])+'/'
     for ep in range(n_train_epochs):
         logger.info("Epoch {}".format(ep))
@@ -966,7 +970,6 @@ def Transfer(task_ids, model, fit_bonus=0):
         words_all, triggers_all, triggers_hat_all, arguments_all, arguments_hat_all = [], [], [], [], []
         triggers_true, triggers_pred, arguments_true, arguments_pred = [], [], [], []
         cum_loss = 0
-
         for n_steps, batch in tqdm.tqdm(enumerate(train_dataloader)):
             tot_n_steps+=1
             net.zero_grad()
@@ -1159,6 +1162,7 @@ def Transfer(task_ids, model, fit_bonus=0):
 
 
 if __name__ == '__main__':
+
     global writer
     if args.tbx:
         logger.info("Using TensorBoardX")
