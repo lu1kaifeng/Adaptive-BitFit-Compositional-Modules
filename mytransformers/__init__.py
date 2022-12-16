@@ -1795,6 +1795,22 @@ if TYPE_CHECKING:
             BertPreTrainedModel,
             load_tf_weights_in_bert,
         )
+        from .models.bertfit import (
+            BERT_PRETRAINED_MODEL_ARCHIVE_LIST,
+            BertForMaskedLM,
+            BertForMultipleChoice,
+            BertForNextSentencePrediction,
+            BertForPreTraining,
+            BertForQuestionAnswering,
+            BertForSequenceClassification,
+            BertForTokenClassification,
+            BertLayer,
+            BertLMHeadModel,
+            BertFitModel,
+            BertModelWithHeads,
+            BertPreTrainedModel,
+            load_tf_weights_in_bert,
+        )
         from .models.bert_generation import (
             BertGenerationDecoder,
             BertGenerationEncoder,

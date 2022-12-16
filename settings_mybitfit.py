@@ -195,7 +195,7 @@ def parse_args():
     parser.add_argument("--whole_optim", action="store_true")
     parser.add_argument("--clear_model", action="store_true")
     parser.add_argument("--whole_mix_step", type=int, default=100, help='the whole epoch number of decision stage')
-    parser.add_argument("--warm_mix_step", type=int, default=1, help='first multiple epochs, in which the weight coefficient is not trained')
+    parser.add_argument("--warm_mix_step", type=int, default=2, help='first multiple epochs, in which the weight coefficient is not trained')
     parser.add_argument("--fit_epoch", type=int, default=0, help='not used')
     parser.add_argument("--last_dim_coe", type=float, default=0.0, help='not used')
     parser.add_argument("--select_temp", type=float, default=1.0, help='not used')
@@ -211,7 +211,8 @@ def parse_args():
     parser.add_argument("--partial_transfer",action="store_true", help='whether to fix unshared modules from old tasks')
 
     parser.add_argument('--z_train_epochs', nargs='+', type=int, default=[100, 100, 100, 100, 100,100], help='set task wise epochs')
-    parser.add_argument('--z_train_lrs', nargs='+', type=float, default=[1e-4,1e-4,1e-4,1e-4,1e-4,1e-4], help='set task wise learning rate')
+
+    parser.add_argument('--z_train_lrs', nargs='+', type=float, default=[2e-4,2e-4,2e-4,2e-4,2e-4,2e-4], help='set task wise learning rate')
 
     parser.add_argument("--layer_debug", action="store_true", help='this is for the module comparision in appendix')
     parser.add_argument("--layer_debug_cnt", type=int, default=-1)
@@ -223,7 +224,8 @@ def parse_args():
     parser.add_argument("--pseudo_ablation", action="store_true", help='pseudo replay ablation study')
 
     parser.add_argument("--tbx", action="store_true", help='TensorBoardX')
-
+    parser.add_argument("--early_stop_patience", type=float, default=20, help='not used')
+    parser.add_argument("--plateau_patience", type=float, default=6, help='not used')
     args = parser.parse_args()
 
     if args.debug:

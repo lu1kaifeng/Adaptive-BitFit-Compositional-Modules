@@ -2,6 +2,7 @@ import shutil
 
 import torch
 from torch.optim import Adam
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torch import nn
 
@@ -370,8 +371,8 @@ def Mix(task_ids, model):
     logger.info("USE ARGS.ADAM_EPSILON NOW.....")
     # logger.info("USE ARGS.ADAM_EPSILON NOW.....")
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.z_train_lrs[task_ids[0]], weight_decay=args.l2)
-    logger.info("Start to use constant scheduler!")
-    scheduler = get_constant_schedule_with_warmup(optimizer, args.z_warmup_step)
+    logger.info("Start to use Plateau scheduler!")
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=args.plateau_patience, verbose=True)
 
     ita = None
     tot_n_steps = 0
@@ -379,7 +380,7 @@ def Mix(task_ids, model):
     mix_flag = 0
     from early_stop import EarlyStopping
     tbx_title = 'mix_' + str(task_ids[0]) + '/'
-    early_stopping = EarlyStopping(patience=15, verbose=True, trace_func=lambda x: logger.info(x))
+    early_stopping = EarlyStopping(patience=args.early_stop_patience, verbose=True, trace_func=lambda x: logger.info(x))
     for ep in range(n_train_epochs):
         logger.info("Epoch {}".format(ep))
         model.train()
@@ -387,8 +388,9 @@ def Mix(task_ids, model):
         words_all, triggers_all, triggers_hat_all, arguments_all, arguments_hat_all = [], [], [], [], []
         triggers_true, triggers_pred, arguments_true, arguments_pred = [], [], [], []
         cum_loss = 0
+        bar = tqdm.tqdm(enumerate(train_dataloader))
         # learnable_para_calculate(model, "whole")
-        for n_steps, batch in tqdm.tqdm(enumerate(train_dataloader)):
+        for n_steps, batch in bar:
             tot_n_steps += 1
             model.zero_grad()
             optimizer.zero_grad()
@@ -438,7 +440,7 @@ def Mix(task_ids, model):
             loss.backward()
 
             optimizer.step(None)
-            scheduler.step()
+
             detached_ita = list(map(lambda x:x.detach().cpu(),ita))
             #### 训练精度评估 ####
             words_all.extend(words_2d)
@@ -475,10 +477,7 @@ def Mix(task_ids, model):
                         a_start, a_end, a_type_idx = argument
                         arguments_pred.append((ii, t_start, t_end, t_type_str, a_start, a_end, a_type_idx))
 
-            if args.constant_sch or task_ids[0] > 0:
-                lr = scheduler.get_last_lr()[0]
-            else:
-                lr = scheduler.get_last_lr()
+
 
             if (n_steps) % args.logging_steps == 0:  # monitoring
                 trigger_p, trigger_r, trigger_f1 = calc_metric(triggers_true, triggers_pred)
@@ -488,7 +487,7 @@ def Mix(task_ids, model):
                 triggers_true, triggers_pred, arguments_true, arguments_pred = [], [], [], []
                 #########################
                 if len(argument_keys) > 0:
-                    logger.info(
+                    bar.set_description(
                         "[Events Detected]step: {}, loss: {:.3f}, trigger_loss:{:.3f}, argument_loss:{:.3f}".format(
                             n_steps,
                             loss,
@@ -499,7 +498,7 @@ def Mix(task_ids, model):
                     )
                     cum_loss = 0
                 else:
-                    logger.info("[No Events Detected]step: {}, loss: {:.3f} ".format(n_steps, loss) +
+                    bar.set_description("[No Events Detected]step: {}, loss: {:.3f} ".format(n_steps, loss) +
                                 '[trigger] P={:.3f}  R={:.3f}  F1={:.3f}'.format(trigger_p, trigger_r, trigger_f1)
                                 )
                     cum_loss = 0
@@ -509,7 +508,9 @@ def Mix(task_ids, model):
             if args.tbx:
                 writer.add_scalar(tbx_title + 'val', new_val_loss, tot_n_steps)
             logger.info("valid loss: {}".format(new_val_loss))
+            scheduler.step(new_val_loss)
             early_stopping(new_val_loss)
+            logger.info("current lr: {}".format(optimizer.param_groups[0]['lr']))
             if early_stopping.improving:
                 if os.path.exists(model_dir) and os.path.isdir(model_dir):
                     shutil.rmtree(model_dir)
@@ -893,20 +894,10 @@ def Transfer(task_ids, model, fit_bonus=0):
     # logger.info("USE ARGS.ADAM_EPSILON NOW.....")
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.z_train_lrs[task_ids[0]], weight_decay=args.l2)
 
-    if args.constant_sch:
-        logger.info("Start to use constant scheduler!")
-        scheduler = get_constant_schedule_with_warmup(optimizer, args.z_warmup_step)
-    elif not args.constant_sch and (not args.lamaml or (args.lamaml and task_ids[0] == 0)):
-        logger.info("Start to use Annealling scheduler!")
-        scheduler = AnnealingLR(optimizer, start_lr=args.z_train_lrs[task_ids[0]],
-                                warmup_iter=int(args.n_warmup_ratio * len(train_qadata)),
-                                num_iters=int(n_train_optimization_steps), decay_style=args.decay_style)
-    elif not args.constant_sch:
-        logger.info("Start to use Annealling scheduler!")
-        scheduler = AnnealingLR(optimizer, start_lr=args.z_train_lrs[task_ids[0]],
-                                warmup_iter=int(args.n_warmup_ratio * len(train_qadata)),
-                                num_iters=int(train_qadata.get_c_len() * 2 * n_train_epochs) + 100,
-                                decay_style=args.decay_style)
+
+    logger.info("Start to use Plateau scheduler!")
+    scheduler = ReduceLROnPlateau(optimizer,mode='min',factor=0.1,patience=args.plateau_patience,verbose=True)
+
 
     tot_n_steps = 0
     # train_once = TrainStep(model, optimizer, scheduler)
@@ -960,7 +951,7 @@ def Transfer(task_ids, model, fit_bonus=0):
                 shared.append(False)
         logger.info("shared: {}".format(shared))
     from early_stop import EarlyStopping
-    early_stopping = EarlyStopping(patience=15, verbose=True, trace_func=lambda x: logger.info(x))
+    early_stopping = EarlyStopping(patience=args.early_stop_patience, verbose=True, trace_func=lambda x: logger.info(x))
     tbx_title = 'transfer_'+str(task_ids[0])+'/'
     for ep in range(n_train_epochs):
         logger.info("Epoch {}".format(ep))
@@ -970,7 +961,8 @@ def Transfer(task_ids, model, fit_bonus=0):
         words_all, triggers_all, triggers_hat_all, arguments_all, arguments_hat_all = [], [], [], [], []
         triggers_true, triggers_pred, arguments_true, arguments_pred = [], [], [], []
         cum_loss = 0
-        for n_steps, batch in tqdm.tqdm(enumerate(train_dataloader)):
+        bar = tqdm.tqdm(enumerate(train_dataloader))
+        for n_steps, batch in bar:
             tot_n_steps+=1
             net.zero_grad()
             optimizer.zero_grad()
@@ -1025,7 +1017,7 @@ def Transfer(task_ids, model, fit_bonus=0):
             loss.backward()
 
             optimizer.step( path[model.config.batch_task_id])
-            scheduler.step()
+
 
             #### 训练精度评估 ####
             words_all.extend(words_2d)
@@ -1082,10 +1074,7 @@ def Transfer(task_ids, model, fit_bonus=0):
             if args.gradient_debug and task_ids[0] == 0:
                 break
 
-            if args.constant_sch:
-                lr = scheduler.get_lr()[0]
-            else:
-                lr = scheduler.get_lr()
+
 
 
             if (n_steps) % args.logging_steps == 0:  # monitoring
@@ -1096,7 +1085,7 @@ def Transfer(task_ids, model, fit_bonus=0):
                 triggers_true, triggers_pred, arguments_true, arguments_pred = [], [], [], []
                 #########################
                 if len(argument_keys) > 0:
-                    logger.info(
+                    bar.set_description(
                         "[Events Detected]step: {}, loss: {:.3f}, trigger_loss:{:.3f}, argument_loss:{:.3f}".format(
                             n_steps,
                             loss,
@@ -1107,7 +1096,7 @@ def Transfer(task_ids, model, fit_bonus=0):
                     )
                     cum_loss = 0
                 else:
-                    logger.info("[No Events Detected]step: {}, loss: {:.3f} ".format(n_steps, loss) +
+                    bar.set_description("[No Events Detected]step: {}, loss: {:.3f} ".format(n_steps, loss) +
                                 '[trigger] P={:.3f}  R={:.3f}  F1={:.3f}'.format(trigger_p, trigger_r, trigger_f1)
                                 )
                     cum_loss = 0
@@ -1118,6 +1107,8 @@ def Transfer(task_ids, model, fit_bonus=0):
             if args.tbx:
                 writer.add_scalar(tbx_title+'val', new_val_loss,tot_n_steps)
             logger.info("valid loss: {}".format(new_val_loss))
+            logger.info("current lr: {}".format(optimizer.param_groups[0]['lr']))
+            scheduler.step(new_val_loss)
             early_stopping(new_val_loss)
             if early_stopping.improving:
                 if os.path.exists(model_dir) and os.path.isdir(model_dir):
