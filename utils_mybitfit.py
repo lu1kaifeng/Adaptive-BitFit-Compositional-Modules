@@ -16,7 +16,7 @@ import pathlib
 from collections import OrderedDict
 
 from ace2005_module.data_load import pad
-from settings_mybitfit import args, TASK_DICT, SPECIAL_TOKENS, SPECIAL_TOKEN_IDS, FILL_VAL
+from settings_mybitfit import args, TASK_DICT, FILL_VAL
 from settings_mybitfit import TOKENIZER, LEN_FACTOR, DATA_ATTRS, MEMORY_FACTOR, MODEL_CONFIG, MODEL_CLASS
 from multiprocessing import Pool
 import sys

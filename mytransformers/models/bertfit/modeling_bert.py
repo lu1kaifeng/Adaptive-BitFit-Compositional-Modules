@@ -940,13 +940,10 @@ class BertFitModel(BertPreTrainedModel):
         return return_adapters
 
     def get_adapter_list(self):
-        final_list = []
-        for i, layer in enumerate(self.encoder.layer):
-            final_list.append({
-                "attention": layer.attention.output.adapters,
-                "output": layer.output.adapters,
-                "adapter_function": layer.adapter_function
-            })
+        final_list = {
+            'original_bias':self.original_bias,
+            'bias_dict':self.bias_dict
+        }
         return final_list
 
     def setup_task_adapter(self, tid):
@@ -961,19 +958,9 @@ class BertFitModel(BertPreTrainedModel):
                 cnt_true += 1
         return cnt_true
 
-    def add_adapter_by_list(self, adapter_list: list, config=None):
-        names = []
-        for layer_adapter in adapter_list:
-            for ada in layer_adapter["adapter_function"]:
-                if ada not in names:
-                    names.append(ada)
-                    self.config.adapters.add(ada, config=config)
-        for i, layer in enumerate(self.encoder.layer):
-            layer.attention.output.adapters = adapter_list[i]["attention"]
-            layer.output.adapters = adapter_list[i]["output"]
-            layer.adapter_function = adapter_list[i]["adapter_function"]
-            pass
-        pass
+    def add_adapter_by_list(self, adapter_list: dict, config=None):
+        self.original_bias = adapter_list['original_bias']
+        self.bias_dict = adapter_list['bias_dict']
 
     def __init__(self, config, add_pooling_layer=True):
 

@@ -3,6 +3,9 @@ import json
 import argparse
 import logging
 import datetime
+
+from ace2005_module.data_load import ACE2005Dataset
+
 logger = logging.getLogger(__name__)
 
 import GPUtil
@@ -131,7 +134,7 @@ def parse_args():
     # parser.add_argument("--glances", default=1, type=int, help="In single pass setting")
     parser.add_argument('--glances', nargs='+', type=int, default=[1, 1, 1, 1, 1], help='not used')
 
-    parser.add_argument("--pre_learning_rate", type=float, default=1e-4, help='not used')
+    parser.add_argument("--pre_learning_rate", type=float, default=1e-5, help='not used')
     parser.add_argument("--pre_warmup_step", type=int, default=100, help='not used')
     parser.add_argument("--pre_start_from", type=str, default="None", help='not used')
 
@@ -207,12 +210,12 @@ def parse_args():
     parser.add_argument("--fake_mix_debug", action="store_true")
     parser.add_argument("--generate_after", action="store_true")
     parser.add_argument("--mix_loss_coe", type=float, default=1.0, help='not used')
-    parser.add_argument("--LOSS_alpha", type=float, default=1.0)
+    parser.add_argument("--LOSS_alpha", type=float, default=2.0)
     parser.add_argument("--partial_transfer",action="store_true", help='whether to fix unshared modules from old tasks')
 
-    parser.add_argument('--z_train_epochs', nargs='+', type=int, default=[100, 100, 100, 100, 100,100], help='set task wise epochs')
+    parser.add_argument('--z_train_epochs', nargs='+', type=int, default=[1000, 1000, 1000, 1000, 1000,1000], help='set task wise epochs')
 
-    parser.add_argument('--z_train_lrs', nargs='+', type=float, default=[2e-4,2e-4,2e-4,2e-4,2e-4,2e-4], help='set task wise learning rate')
+    parser.add_argument('--z_train_lrs', nargs='+', type=float, default=[1e-5,1e-5,1e-5,1e-5,1e-5,1e-5], help='set task wise learning rate')
 
     parser.add_argument("--layer_debug", action="store_true", help='this is for the module comparision in appendix')
     parser.add_argument("--layer_debug_cnt", type=int, default=-1)
@@ -224,14 +227,14 @@ def parse_args():
     parser.add_argument("--pseudo_ablation", action="store_true", help='pseudo replay ablation study')
 
     parser.add_argument("--tbx", action="store_true", help='TensorBoardX')
-    parser.add_argument("--early_stop_patience", type=float, default=20, help='not used')
-    parser.add_argument("--plateau_patience", type=float, default=6, help='not used')
+    parser.add_argument("--early_stop_patience", type=float, default=25, help='not used')
+    parser.add_argument("--plateau_patience", type=float, default=15, help='not used')
     args = parser.parse_args()
 
     if args.debug:
         args.logging_steps = 1
         torch.manual_seed(0)
-        torch.backends.cudnn.deterministric = True
+        #torch.backends.cudnn.deterministric = True
 
     args.model_dir_root = os.path.join(args.model_dir_root, args.model_name,
                                        args.seq_train_type, "{}_{}_{}_{}".format(args.id, "_".join(args.tasks), args.gen_lm_sample_percentage, args.seed) if "lll" in args.seq_train_type or "finetune" in args.seq_train_type or "llewc" in args.seq_train_type else "_".join(args.tasks)+"_seed_%d"%args.seed)
@@ -274,9 +277,6 @@ def parse_args():
     if args.test_batch_size <= 0:
         args.test_batch_size = [int(memory_size * MEMORY_FACTOR[args.seq_train_type]) for memory_size in args.memory_sizes]
 
-    special_tokens = {"ans_token":'__ans__', "pad_token":'__pad__', "unk_token":'__unk__', "eos_token": '<|endoftext|>'}
-    if args.use_sep:
-        special_tokens["sep_token"] = '__sep__'
 
     model_class, tokenizer_class, config_class = MODEL_CLASSES[args.model_name]
 
@@ -289,19 +289,12 @@ def parse_args():
             continue
 
     print("TOKENIZER ORIGIN LEN: {}".format(len(tokenizer)))
-    if not args.pretraining:
-        tokenizer.add_tokens(list(special_tokens.values()))
-    special_token_ids = {k:tokenizer.convert_tokens_to_ids(v) for k,v in special_tokens.items()}
     model_config = config_class.from_pretrained('./bert-large-uncased')
-    model_config.vocab_size = len(tokenizer)
+    #model_config.vocab_size = len(tokenizer)
 
     test = torch.ones([1], dtype=torch.float).cuda()
 
     tokens_weight = torch.ones([model_config.vocab_size], dtype=torch.float).cuda()
-    if not args.pretraining:
-        tokens_weight[special_token_ids["ans_token"]] = args.tokens_weight
-        if args.use_sep:
-            tokens_weight[special_token_ids["sep_token"]] = args.tokens_weight
 
     args.max_len = model_config.max_position_embeddings - args.preseqlen
 
@@ -323,7 +316,8 @@ def parse_args():
             args.n_train_epochs = {d[0]: min(args.max_n_epochs, max_total_data_size//d[1]) for d in data_sizes.items()}
         else:
             args.n_train_epochs = {task: args.n_train_epochs for task in args.tasks}
-    return args, model_config, model_class, tokenizer, config_class, special_token_ids, special_tokens, data_attrs, tokens_weight
+    ACE2005Dataset.tokenizer = tokenizer
+    return args, model_config, model_class, tokenizer, config_class,  data_attrs, tokens_weight
 
 
 class TimeFilter(logging.Filter):
@@ -350,7 +344,7 @@ def init_logging(filename):
     for handler in root_logger.handlers:
         handler.addFilter(TimeFilter())
 
-args, MODEL_CONFIG, MODEL_CLASS, TOKENIZER, CONFIG_CLASS, SPECIAL_TOKEN_IDS, SPECIAL_TOKENS, DATA_ATTRS, TOKENS_WEIGHT = parse_args()
+args, MODEL_CONFIG, MODEL_CLASS, TOKENIZER, CONFIG_CLASS, DATA_ATTRS, TOKENS_WEIGHT = parse_args()
 
 
 TASK_DICT = {

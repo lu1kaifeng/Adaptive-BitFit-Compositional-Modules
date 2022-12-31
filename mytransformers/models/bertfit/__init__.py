@@ -102,7 +102,7 @@ if TYPE_CHECKING:
             BertForTokenClassification,
             BertLayer,
             BertLMHeadModel,
-            BertModel,
+            BertFitModel,
             BertModelWithHeads,
             BertPreTrainedModel,
             load_tf_weights_in_bert,

@@ -10,31 +10,6 @@ from transformers import GPT2Model, GPT2Tokenizer, BertModel, BertTokenizer, Ope
 
 from ace2005_module.consts import NONE, PAD, CLS, SEP, TRIGGERS, ARGUMENTS, ENTITIES, POSTAGS
 
-MODELS_dict = {'Bert_large': (BertModel, BertTokenizer, 'bert-large-uncased'),
-               "Gpt": (OpenAIGPTModel, OpenAIGPTTokenizer, 'openai-gpt'),
-               "Gpt2": (GPT2Model, GPT2Tokenizer, 'gpt2'),
-               "Ctrl": (CTRLModel, CTRLTokenizer, 'ctrl'),
-               "TransfoXL": (TransfoXLModel, TransfoXLTokenizer, 'transfo-xl-wt103'),
-               "Xlnet_base": (XLNetModel, XLNetTokenizer, 'xlnet-base-cased'),
-               "Xlnet_large": (XLNetModel, XLNetTokenizer, 'xlnet-large-cased'),
-               "XLM": (XLMModel, XLMTokenizer, 'xlm-mlm-enfr-1024'),
-               "DistilBert_base": (DistilBertModel, DistilBertTokenizer, 'distilbert-base-uncased'),
-               "DistilBert_large": (DistilBertModel, DistilBertTokenizer, 'distilbert-large-cased'),
-               "Roberta_base": (RobertaModel, RobertaTokenizer, 'roberta-base'),
-               "Roberta_large": (RobertaModel, RobertaTokenizer, 'roberta-large'),
-               "XLMRoberta_base": (XLMRobertaModel, XLMRobertaTokenizer, 'xlm-roberta-base'),
-               "XLMRoberta_large": (XLMRobertaModel, XLMRobertaTokenizer, 'xlm-roberta-large'),
-               "ALBERT-base-v1": (AlbertModel, AlbertTokenizer, 'albert-base-v1'),
-               "ALBERT-large-v1": (AlbertModel, AlbertTokenizer, 'albert-large-v1'),
-               "ALBERT-xlarge-v1": (AlbertModel, AlbertTokenizer, 'albert-xlarge-v1'),
-               "ALBERT-xxlarge-v1": (AlbertModel, AlbertTokenizer, 'albert-xxlarge-v1'),
-               "ALBERT-base-v2": (AlbertModel, AlbertTokenizer, 'albert-base-v2'),
-               "ALBERT-large-v2": (AlbertModel, AlbertTokenizer, 'albert-large-v2'),
-               "ALBERT-xlarge-v2": (AlbertModel, AlbertTokenizer, 'albert-xlarge-v2'),
-               "ALBERT-xxlarge-v2": (AlbertModel, AlbertTokenizer, 'albert-xxlarge-v2'),
-               }
-tokenizer = MODELS_dict['Bert_large'][1].from_pretrained(MODELS_dict['Bert_large'][2])
-
 
 def build_vocab(labels, BIO_tagging=True):
     all_labels = [PAD, NONE]
@@ -46,6 +21,7 @@ def build_vocab(labels, BIO_tagging=True):
             all_labels.append(label)
     label2idx = {tag: idx for idx, tag in enumerate(all_labels)}
     idx2label = {idx: tag for idx, tag in enumerate(all_labels)}
+    #idx2label.update({tag: idx for idx, tag in enumerate(all_labels)})
 
     return all_labels, label2idx, idx2label
 
@@ -57,19 +33,23 @@ all_arguments, argument2idx, idx2argument = build_vocab(ARGUMENTS, BIO_tagging=F
 
 
 class ACE2005Dataset(data.Dataset):
-    def __init__(self, fpath,current_task):
+    tokenizer = None
+
+    def __init__(self, fpath, current_task):
         self.current_task = current_task
-        self.task_name_dict={'bc':0,'bn':1,'cts':2,'nw':3,'un':4,'wl':5}
+        self.task_name_dict = {'bc': 0, 'bn': 1, 'cts': 2, 'nw': 3, 'un': 4, 'wl': 5}
         self.task_id = []
         self.sent_li, self.entities_li, self.postags_li, self.triggers_li, self.arguments_li, self.adjm_li = [], [], [], [], [], []
 
         with open(fpath, 'r') as f:
             data = json.load(f)
+
             def filter(x):
-                x['path'] = self.task_name_dict[re.match('(\w+)/.*',x['path']).group(1)]
+                x['path'] = self.task_name_dict[re.match('(\w+)/.*', x['path']).group(1)]
                 return x
-            data = list(map(filter,data))
-            data = list(sorted(data,key=lambda x:x['path']))
+
+            data = list(map(filter, data))
+            data = list(sorted(data, key=lambda x: x['path']))
             for item in data:
                 if not (item['path'] == self.current_task):
                     continue
@@ -113,13 +93,14 @@ class ACE2005Dataset(data.Dataset):
                             triggers[i] = 'I-{}'.format(trigger_type)
 
                     event_key = (
-                    event_mention['trigger']['start'], event_mention['trigger']['end'], event_mention['event_type'])
+                        event_mention['trigger']['start'], event_mention['trigger']['end'], event_mention['event_type'])
                     arguments['events'][event_key] = []
                     for argument in event_mention['arguments']:
                         role = argument['role']
                         if role.startswith('Time'):
                             role = role.split('-')[0]
-                        arguments['events'][event_key].append((argument['start'], argument['end'], argument2idx[role]))
+                        #arguments['events'][event_key].append((argument['start'], argument['end'], argument2idx[role]))
+                        arguments['events'][event_key].append((argument['start'], argument['end'], role))
                 self.sent_li.append([CLS] + words + [SEP])
                 self.task_id.append(item['path'])
                 self.entities_li.append([[PAD]] + entities + [[PAD]])
@@ -129,19 +110,22 @@ class ACE2005Dataset(data.Dataset):
                 self.adjm_li.append(adjm)
 
     def __len__(self):
-        #return 32
+        # return 32
         return len(self.sent_li)
 
     def __getitem__(self, idx):
-        words, entities, postags, triggers, arguments, adjm,task_id = self.sent_li[idx], self.entities_li[idx], self.postags_li[
-            idx], self.triggers_li[idx], self.arguments_li[idx], self.adjm_li[idx],self.task_id[idx]
+        words, entities, postags, triggers, arguments, adjm, task_id = self.sent_li[idx], self.entities_li[idx], \
+                                                                       self.postags_li[
+                                                                           idx], self.triggers_li[idx], \
+                                                                       self.arguments_li[idx], self.adjm_li[idx], \
+                                                                       self.task_id[idx]
 
         # We give credits only to the first piece.
         tokens_x, entities_x, postags_x, is_heads = [], [], [], []
         for w, e, p in zip(words, entities, postags):
-            tokens = tokenizer.tokenize(w) if w not in [CLS, SEP] else [
+            tokens = self.tokenizer.tokenize(w) if w not in [CLS, SEP] else [
                 w]  ## w=offenses,而tokens= ['offense', '##s'],此时只保留offense,否则会导致触发词的漂移量错位
-            tokens_xx = tokenizer.convert_tokens_to_ids(tokens)
+            tokens_xx = self.tokenizer.convert_tokens_to_ids(tokens)
 
             if w in [CLS, SEP]:
                 is_head = [0]
@@ -163,7 +147,7 @@ class ACE2005Dataset(data.Dataset):
 
         seqlen = len(tokens_x)
 
-        return tokens_x, entities_x, postags_x, triggers_y, arguments, seqlen, head_indexes, words, triggers, adjm,task_id
+        return tokens_x, entities_x, postags_x, triggers_y, arguments, seqlen, head_indexes, words, triggers, adjm, task_id
 
     def get_samples_weight(self):
         samples_weight = []
@@ -181,7 +165,8 @@ class ACE2005Dataset(data.Dataset):
 
 
 def pad(batch):
-    tokens_x_2d, entities_x_3d, postags_x_2d, triggers_y_2d, arguments_2d, seqlens_1d, head_indexes_2d, words_2d, triggers_2d, adjm,task_id = list(map(list, zip(*batch)))
+    tokens_x_2d, entities_x_3d, postags_x_2d, triggers_y_2d, arguments_2d, seqlens_1d, head_indexes_2d, words_2d, triggers_2d, adjm, task_id = list(
+        map(list, zip(*batch)))
     maxlen = np.array(seqlens_1d).max()
 
     for i in range(len(tokens_x_2d)):
@@ -194,8 +179,14 @@ def pad(batch):
     return tokens_x_2d, entities_x_3d, postags_x_2d, \
            triggers_y_2d, arguments_2d, \
            seqlens_1d, head_indexes_2d, \
-           words_2d, triggers_2d, adjm,task_id
+           words_2d, triggers_2d, adjm, task_id
+
 
 if __name__ == '__main__':
-    dataset = ACE2005Dataset('./ace2005/dev.json')
+    tokenizer = BertTokenizer.from_pretrained('../bert-large-uncased')
+    ACE2005Dataset.tokenizer = tokenizer
+    ds = ACE2005Dataset('../ace2005/test.json', 0)
+    ds21 = ds[2]
+    ds = ACE2005Dataset('../ace2005/test.json', 0)
+    ds22 = ds[2]
     pass
