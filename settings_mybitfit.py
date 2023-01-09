@@ -215,7 +215,7 @@ def parse_args():
 
     parser.add_argument('--z_train_epochs', nargs='+', type=int, default=[1000, 1000, 1000, 1000, 1000,1000], help='set task wise epochs')
 
-    parser.add_argument('--z_train_lrs', nargs='+', type=float, default=[1e-5,1e-5,1e-5,1e-5,1e-5,1e-5], help='set task wise learning rate')
+    parser.add_argument('--z_train_lrs', nargs='+', type=float, default=[1e-4,1e-4,1e-4,1e-4,1e-4,1e-4], help='set task wise learning rate')
 
     parser.add_argument("--layer_debug", action="store_true", help='this is for the module comparision in appendix')
     parser.add_argument("--layer_debug_cnt", type=int, default=-1)
@@ -227,8 +227,8 @@ def parse_args():
     parser.add_argument("--pseudo_ablation", action="store_true", help='pseudo replay ablation study')
 
     parser.add_argument("--tbx", action="store_true", help='TensorBoardX')
-    parser.add_argument("--early_stop_patience", type=float, default=25, help='not used')
-    parser.add_argument("--plateau_patience", type=float, default=15, help='not used')
+    parser.add_argument("--early_stop_patience", type=float, default=25, help='used')
+    parser.add_argument("--plateau_patience", type=float, default=15, help='used')
     args = parser.parse_args()
 
     if args.debug:

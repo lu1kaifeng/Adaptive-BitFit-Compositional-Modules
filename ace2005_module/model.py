@@ -43,14 +43,7 @@ class Net(nn.Module):
         ## PreTrainModel
 
         self.PreModel = PreModel
-        self.hp = hyper_para
-        self.tri_embsize = 100
-        self.pos_embsize = 100
-        self.arg_embsize = 100
         self.idx2trigger = idx2trigger
-        self.trigger_embed = nn.Embedding(num_embeddings=trigger_size, embedding_dim=self.tri_embsize)
-        self.argument_embed = nn.Embedding(num_embeddings=argument_size, embedding_dim=self.arg_embsize)
-        self.position_embed = nn.Embedding(num_embeddings=100, embedding_dim=self.pos_embsize)
 
         self.argument_size = argument_size
 
@@ -69,8 +62,6 @@ class Net(nn.Module):
         )
 
         self.device = device
-        self.emb = 0  # 一个batch 的嵌入表达初始化
-        self.mask = 0
 
     # Ngramcnn
     # self.NgramCNN = NgramCNN(hidden_size=self.hidden_size)
@@ -94,14 +85,12 @@ class Net(nn.Module):
 
 
         # x = torch.cat([enc, entity_x_2d, postags_x_2d], 2)
-        # x = self.fc1(enc)  # x: [batch_size, seq_len, hidden_size]
-        x = enc
+        x = self.fc1(enc)  # x: [batch_size, seq_len, hidden_size]
         # logits = self.fc2(x + enc)
 
         batch_size = tokens_x_2d.shape[0]
 
-        for i in range(batch_size):
-            x[i] = torch.index_select(x[i], 0, head_indexes_2d[i])
+        x = torch.stack([torch.index_select(x[i], 0, head_indexes_2d[i]) for i in range(batch_size)])
 
         trigger_logits = self.fc_trigger(x)
         trigger_hat_2d = trigger_logits.argmax(-1)

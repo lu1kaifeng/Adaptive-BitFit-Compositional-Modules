@@ -851,6 +851,27 @@ BERT_INPUTS_DOCSTRING = r"""
             Whether or not to return a :class:`~transformers.file_utils.ModelOutput` instead of a plain tuple.
 """
 
+from torch.nn.utils.parametrizations import parametrize
+
+
+class DynamicBias(nn.Module):
+    def __init__(self, mix_coe, bias, training_setup, n):
+        super().__init__()
+        self.mix_coe = nn.Parameter(mix_coe)
+        self.softmax = nn.Softmax(dim=0)
+        self.bias_dict = bias
+        self.backing_bias = nn.Parameter(self.bias_dict[training_setup][n])
+        self.training_setup = training_setup
+        self.n = n
+
+    def forward(self, X):
+        sm = self.softmax(self.mix_coe)
+        new_bias = self.backing_bias * sm[-1]
+        for c, w in zip(sm[:-1],
+                        [e[self.n] for i, e in self.bias_dict.items() if i is not self.training_setup]):
+            new_bias += c * w
+        return new_bias
+
 
 @add_start_docstrings(
     "The bare Bert Model transformer outputting raw hidden-states without any specific head on top.",
@@ -869,6 +890,7 @@ class BertFitModel(BertPreTrainedModel):
     argument and :obj:`add_cross_attention` set to :obj:`True`; an :obj:`encoder_hidden_states` is then expected as an
     input to the forward pass.
     """
+
     def freeze_model(self, freeze=True):
         """Freezes all weights of the model."""
         for name, param in self.base_model.named_parameters():
@@ -877,19 +899,46 @@ class BertFitModel(BertPreTrainedModel):
 
     def train_adapter(self, adapter_setup: list):
         """Sets the model into mode for training the given adapters."""
+        self.training_setup = adapter_setup[0]
         self.train()
         self.freeze_model(True)
         state_dict = self.state_dict()
         state_dict.update(self.bias_dict[adapter_setup[0]])
         self.load_state_dict(state_dict)
-        for k,v in self.get_bias().items():
+        for k, v in self.get_bias().items():
             v.requires_grad = True
-        pass
+        if self.config.forward_mode == 'Mix':
+            self.parameterize_model(adapter_setup[0])
+            pass
 
-    def _add_bias(self,name:str,d: dict):
+    def parameterize_model(self,which):
+        mix_coe = dict()
+        self.bias_modules = []
+        for n, p in self.get_bias().items():
+            mix_coe[n] = torch.zeros([len(self.bias_dict)])
+            mix_coe[n] = mix_coe[n].cuda()
+            mix_coe[n].requires_grad = True
+            pass
+        for n, p in self.bias_dict[which].items():
+            p.requires_grad = True
+        module_dict = {k: v for k, v in self.named_modules()}
+        for n, p in self.get_bias().items():
+            bm = DynamicBias(mix_coe[n], self.bias_dict, self.training_setup,
+                             n)
+            self.bias_modules.append((n[0:-5], 'bias', bm))
+            parametrize.register_parametrization(module_dict[n[0:-5]], 'bias', bm
+                                                 )
+
+
+    def deparameterize_model(self):
+        module_dict = {k: v for k, v in self.named_modules()}
+        for mn,_,_ in self.bias_modules:
+            parametrize.remove_parametrizations(module_dict[mn], 'bias')
+
+    def _add_bias(self, name: str, d: dict):
         nd = {}
-        for k,v in d.items():
-            nd[k] = v.clone()
+        for k, v in d.items():
+            nd[k] = v.clone().cuda()
         self.bias_dict[name] = nd
         return nd
 
@@ -898,7 +947,6 @@ class BertFitModel(BertPreTrainedModel):
             self.original_bias = self.get_detached_bias()
         self._add_bias(adapter_name, self.original_bias)
         return [adapter_name]
-
 
     def _add_fusion_layer(self, adapter_names):
         self.encoder.add_fusion_layer(adapter_names)
@@ -940,9 +988,14 @@ class BertFitModel(BertPreTrainedModel):
         return return_adapters
 
     def get_adapter_list(self):
+        if self.config.forward_mode == 'Mix':
+            with torch.no_grad():
+                self.bias_dict[self.training_setup] = {mn+'.bias':bm.forward(None) for mn,_,bm in self.bias_modules}
+        else:
+            self.bias_dict[self.training_setup] = self.get_detached_bias()
         final_list = {
-            'original_bias':self.original_bias,
-            'bias_dict':self.bias_dict
+            'original_bias': self.original_bias,
+            'bias_dict': self.bias_dict
         }
         return final_list
 
@@ -959,12 +1012,21 @@ class BertFitModel(BertPreTrainedModel):
         return cnt_true
 
     def add_adapter_by_list(self, adapter_list: dict, config=None):
-        self.original_bias = adapter_list['original_bias']
-        self.bias_dict = adapter_list['bias_dict']
+        self.original_bias = adapter_list.item()['original_bias']
+        self.bias_dict = adapter_list.item()['bias_dict']
+
+    def mix(self):
+        self.config.forward_mode = 'Mix'
+        pass
+
+    def transfer(self):
+        self.config.forward_mode = 'Transfer'
+        pass
 
     def __init__(self, config, add_pooling_layer=True):
 
         BertPreTrainedModel.__init__(self, config)
+        self.training_setup = None
         self.original_bias = None
         self.bias_dict = {}
         self.config = config
@@ -979,11 +1041,11 @@ class BertFitModel(BertPreTrainedModel):
 
     def get_bias(self):
         import re
-        return {x[0]:x[1] for x in filter(lambda x: re.match('.*\.bias', x[0]), self.named_parameters())}
+        return {x[0]: x[1] for x in filter(lambda x: re.match('.*\.bias', x[0]), self.named_parameters())}
 
     def get_detached_bias(self):
         import re
-        return {x[0]:x[1].detach() for x in filter(lambda x: re.match('.*\.bias', x[0]), self.named_parameters())}
+        return {x[0]: x[1].detach() for x in filter(lambda x: re.match('.*\.bias', x[0]), self.named_parameters())}
 
     def get_input_embeddings(self):
         return self.embeddings.word_embeddings
@@ -1043,12 +1105,13 @@ class BertFitModel(BertPreTrainedModel):
             If set to :obj:`True`, :obj:`past_key_values` key value states are returned and can be used to speed up
             decoding (see :obj:`past_key_values`).
         """
+        bias = self.get_bias()
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        #self.pre_transformer_forward()
+        # self.pre_transformer_forward()
 
         if self.config.is_decoder:
             use_cache = use_cache if use_cache is not None else self.config.use_cache
@@ -1105,7 +1168,7 @@ class BertFitModel(BertPreTrainedModel):
             inputs_embeds=inputs_embeds,
             past_key_values_length=past_key_values_length,
         )
-        #embedding_output = self.invertible_adapters_forward(embedding_output)
+        # embedding_output = self.invertible_adapters_forward(embedding_output)
 
         encoder_outputs = self.encoder(
             embedding_output,
