@@ -1,27 +1,14 @@
-# Adaptive-Compositional-Modules
-Code for the ACL 2022 paper 
+# Continual Joint Multiple Events Extraction via Adaptive Bias Mixing
+A paper I am working on
 
-*Yanzhe Zhang, Xuezhi Wang and Diyi Yang*: Continual Sequence Generation with Adaptive Compositional Modules
+![Model Architecture](./arch.png)
 
-[Arxiv version](https://arxiv.org/abs/2203.10652)
+Continual event extraction is of practical utility in natural language processing. In the real world, it is common to encounter novel event types or data sources, on which the model needs to quickly adapt without forgetting knowledge of old tasks. Existing work on continual event extraction either always reuses existing parameters to learn new tasks, or blindly adds new parameters for every new task, incurring significant computational cost while preventing potential share of knowledge between tasks. To get the best of both worlds, in this work, we propose continual joint event extraction with adaptive bias mixing to adapt model for incoming tasks in a parameter efficient manner. We also incorporate metric learning to construct a prototypical network for maximum parameter efficiency. Experiment results on ACE2005 dataset show that our framework retains baseline performance with significantly smaller parameter size.
 
-![Model Growing Process](./v2.gif)
 
-```
-@misc{zhang2022continual,
-    title={Continual Sequence Generation with Adaptive Compositional Modules},
-    author={Yanzhe Zhang and Xuezhi Wang and Diyi Yang},
-    year={2022},
-    eprint={2203.10652},
-    archivePrefix={arXiv},
-    primaryClass={cs.CL}
-}
-```
 #### Data
 
-The data processing process of this paper is following [LAMOL](https://github.com/jojotenya/LAMOL) and [L2KD](https://github.com/voidism/L2KD). You can download the preprocess datasets in their repo.
-
-If you want to run your own datasets, please following their guidelines to prepare the data.
+I used ACE2005 Dataset, If you want to run your own datasets, please following their guidelines to prepare the data.
 
 #### Environment
 
@@ -66,38 +53,8 @@ Note that the folder `mytransformers` contains the 2.0 version of adapter-transf
 - Data format conversion refer to [decaNLP](https://github.com/salesforce/decaNLP), the Natural Language Decathlon: Multitask Learning as Question Answering implementation code by Bryan McCann et al.
 
 #### Citation
-
-If you use or find this repo useful, please consider citing following papers
-
-```
-@misc{zhang2022continual,
-    title={Continual Sequence Generation with Adaptive Compositional Modules},
-    author={Yanzhe Zhang and Xuezhi Wang and Diyi Yang},
-    year={2022},
-    eprint={2203.10652},
-    archivePrefix={arXiv},
-    primaryClass={cs.CL}
-}
-```
-
-also
-
-```
-@article{chuang2020lifelong,
-  title={Lifelong Language Knowledge Distillation},
-  author={Chuang, Yung-Sung and Su, Shang-Yu and Chen, Yun-Nung},
-  journal={arXiv preprint arXiv:2010.02123},
-  year={2020}
-}
-
-@inproceedings{sun2019lamol,
-  title={LAMOL: LAnguage MOdeling for Lifelong Language Learning},
-  author={Sun, Fan-Keng and Ho, Cheng-Hao and Lee, Hung-Yi},
-  booktitle={International Conference on Learning Representations},
-  year={2019}
-}
-```
+Yet to be published
 
 #### Questions
 
-If you have any questions about our paper and code, please contact Yanzhe Zhang via `z_yanzhe AT gatech.edu`.
+If you have any questions about our paper and code, please contact Lu Chengeng via `qq844303749@gmail.com`.

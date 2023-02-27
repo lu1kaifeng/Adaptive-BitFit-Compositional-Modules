@@ -210,7 +210,7 @@ def parse_args():
     parser.add_argument("--fake_mix_debug", action="store_true")
     parser.add_argument("--generate_after", action="store_true")
     parser.add_argument("--mix_loss_coe", type=float, default=1.0, help='not used')
-    parser.add_argument("--LOSS_alpha", type=float, default=2.0)
+    parser.add_argument("--LOSS_alpha", type=float, default=1.0)
     parser.add_argument("--partial_transfer",action="store_true", help='whether to fix unshared modules from old tasks')
 
     parser.add_argument('--z_train_epochs', nargs='+', type=int, default=[1000, 1000, 1000, 1000, 1000,1000], help='set task wise epochs')

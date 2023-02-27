@@ -1109,7 +1109,8 @@ if __name__ == '__main__':
                             model = Fit([task_id], model, current_fit_epoch)
                             fit_bonus = 0
                         if trans:
-                            model = Transfer([task_id], model, fit_bonus)
+                            pass
+                            #model = Transfer([task_id], model, fit_bonus)
                     else:
                         logger.info("In fake mix debug!")
                         tmp_model = copy.deepcopy(model)
@@ -1175,4 +1176,5 @@ if __name__ == '__main__':
                     model = Fit([task_id], model, current_fit_epoch)
                     fit_bonus = 0
                 if trans:
-                    model = Transfer([task_id], model, fit_bonus)
+                    pass
+                    #model = Transfer([task_id], model, fit_bonus)
