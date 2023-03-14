@@ -868,7 +868,7 @@ class DynamicBias(nn.Module):
 
     def right_inverse(self, Z):
         prev = torch.stack([e[self.n] for i, e in self.bias_dict.items() if i is not self.training_setup])
-        return torch.zeros(torch.stack([self.backing_bias]).shape),torch.zeros([len(self.bias_dict)]).cuda(),prev
+        return torch.stack([self.backing_bias]),torch.zeros([len(self.bias_dict)]).cuda(),prev
 
 
 @add_start_docstrings(

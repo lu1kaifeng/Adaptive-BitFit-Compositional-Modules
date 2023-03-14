@@ -132,26 +132,26 @@ def validation(model, iterator, fname='eval'):
 
     # print(classification_report([idx2trigger[idx] for idx in y_true], [idx2trigger[idx] for idx in y_pred]))
 
-    print('[trigger classification]')
+    logger.info('[trigger classification]')
     trigger_p, trigger_r, trigger_f1 = calc_metric(triggers_true, triggers_pred)
-    print('P={:.3f}\tR={:.3f}\tF1={:.3f}'.format(trigger_p, trigger_r, trigger_f1))
+    logger.info('P={:.3f}\tR={:.3f}\tF1={:.3f}'.format(trigger_p, trigger_r, trigger_f1))
 
-    print('[argument classification]')
+    logger.info('[argument classification]')
     argument_p, argument_r, argument_f1 = calc_metric(arguments_true, arguments_pred)
-    print('P={:.3f}\tR={:.3f}\tF1={:.3f}'.format(argument_p, argument_r, argument_f1))
+    logger.info('P={:.3f}\tR={:.3f}\tF1={:.3f}'.format(argument_p, argument_r, argument_f1))
 
 
-    print('[trigger identification]')
+    logger.info('[trigger identification]')
     triggers_true = [(item[0], item[1], item[2]) for item in triggers_true]
     triggers_pred = [(item[0], item[1], item[2]) for item in triggers_pred]
     trigger_p_, trigger_r_, trigger_f1_ = calc_metric(triggers_true, triggers_pred)
-    print('P={:.3f}\tR={:.3f}\tF1={:.3f}'.format(trigger_p_, trigger_r_, trigger_f1_))
+    logger.info('P={:.3f}\tR={:.3f}\tF1={:.3f}'.format(trigger_p_, trigger_r_, trigger_f1_))
 
-    print('[argument identification]')
+    logger.info('[argument identification]')
     arguments_true = [(item[0], item[1], item[2], item[3], item[4], item[5]) for item in arguments_true]
     arguments_pred = [(item[0], item[1], item[2], item[3], item[4], item[5]) for item in arguments_pred]
     argument_p_, argument_r_, argument_f1_ = calc_metric(arguments_true, arguments_pred)
-    print('P={:.3f}\tR={:.3f}\tF1={:.3f}'.format(argument_p_, argument_r_, argument_f1_))
+    logger.info('P={:.3f}\tR={:.3f}\tF1={:.3f}'.format(argument_p_, argument_r_, argument_f1_))
 
     metric = '[trigger classification]\tP={:.3f}\tR={:.3f}\tF1={:.3f}\n'.format(trigger_p, trigger_r, trigger_f1)
     metric += '[argument classification]\tP={:.3f}\tR={:.3f}\tF1={:.3f}\n'.format(argument_p, argument_r, argument_f1)
