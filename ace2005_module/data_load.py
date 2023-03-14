@@ -110,7 +110,7 @@ class ACE2005Dataset(data.Dataset):
                 self.adjm_li.append(adjm)
 
     def __len__(self):
-        # return 32
+        #return 32
         return len(self.sent_li)
 
     def __getitem__(self, idx):

@@ -368,7 +368,7 @@ class BertAttention(nn.Module):
         self.pruned_heads = set()
 
     def prune_heads(self, heads):
-        if len(heads) == 0:
+        '''if len(heads) == 0:
             return
         heads, index = find_pruneable_heads_and_indices(
             heads, self.self.num_attention_heads, self.self.attention_head_size, self.pruned_heads
@@ -383,7 +383,9 @@ class BertAttention(nn.Module):
         # Update hyper params and store pruned heads
         self.self.num_attention_heads = self.self.num_attention_heads - len(heads)
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
-        self.pruned_heads = self.pruned_heads.union(heads)
+        self.pruned_heads = self.pruned_heads.union(heads)'''
+        # this messes with mixing
+        pass
 
     def forward(
             self,
@@ -461,15 +463,14 @@ class BertLayer(BertLayerAdaptersMixin, nn.Module):
 
     def forward(
             self,
-            hidden_states,
-            attention_mask=None,
-            head_mask=None,
-            encoder_hidden_states=None,
-            encoder_attention_mask=None,
-            past_key_value=None,
-            output_attentions=False,
-    ):
-
+            hidden_states: torch.Tensor,
+            attention_mask: Optional[torch.FloatTensor] = None,
+            head_mask: Optional[torch.FloatTensor] = None,
+            encoder_hidden_states: Optional[torch.FloatTensor] = None,
+            encoder_attention_mask: Optional[torch.FloatTensor] = None,
+            past_key_value: Optional[Tuple[Tuple[torch.FloatTensor]]] = None,
+            output_attentions: Optional[bool] = False,
+    ) -> Tuple[torch.Tensor]:
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
         self_attention_outputs = self.attention(
@@ -480,11 +481,7 @@ class BertLayer(BertLayerAdaptersMixin, nn.Module):
             past_key_value=self_attn_past_key_value,
         )
         attention_output = self_attention_outputs[0]
-        if self.uni_adapter is None:
-            self.uni_adapter = np.unique(self.adapter_function)
-        '''hidden_states = self.attention.output.mix_adapters_forward(attention_output, hidden_states, self.ita,
-                                                                   self.config.batch_task_id, self.config.forward_mode,
-                                                                   self.uni_adapter, self.adapter_function)'''
+
         # if decoder, the last output is tuple of self-attn cache
         if self.is_decoder:
             outputs = self_attention_outputs[1:-1]
@@ -494,14 +491,16 @@ class BertLayer(BertLayerAdaptersMixin, nn.Module):
 
         cross_attn_present_key_value = None
         if self.is_decoder and encoder_hidden_states is not None:
-            assert hasattr(
-                self, "crossattention"
-            ), f"If `encoder_hidden_states` are passed, {self} has to be instantiated with cross-attention layers by setting `config.add_cross_attention=True`"
+            if not hasattr(self, "crossattention"):
+                raise ValueError(
+                    f"If `encoder_hidden_states` are passed, {self} has to be instantiated with cross-attention layers"
+                    " by setting `config.add_cross_attention=True`"
+                )
 
             # cross_attn cached key/values tuple is at positions 3,4 of past_key_value tuple
             cross_attn_past_key_value = past_key_value[-2:] if past_key_value is not None else None
             cross_attention_outputs = self.crossattention(
-                hidden_states,
+                attention_output,
                 attention_mask,
                 head_mask,
                 encoder_hidden_states,
@@ -510,7 +509,6 @@ class BertLayer(BertLayerAdaptersMixin, nn.Module):
                 output_attentions,
             )
             attention_output = cross_attention_outputs[0]
-            hidden_states = hidden_states + attention_output
             outputs = outputs + cross_attention_outputs[1:-1]  # add cross attentions if we output attention weights
 
             # add cross-attn cache to positions 3,4 of present_key_value tuple
@@ -518,11 +516,9 @@ class BertLayer(BertLayerAdaptersMixin, nn.Module):
             present_key_value = present_key_value + cross_attn_present_key_value
 
         layer_output = apply_chunking_to_forward(
-            self.feed_forward_chunk, self.chunk_size_feed_forward, self.seq_len_dim, hidden_states
+            self.feed_forward_chunk, self.chunk_size_feed_forward, self.seq_len_dim, attention_output
         )
-        '''layer_output = self.output.mix_adapters_forward(layer_output, hidden_states, self.ita,
-                                                        self.config.batch_task_id, self.config.forward_mode,
-                                                        self.uni_adapter, self.adapter_function)'''
+        #layer_output = self.feed_forward_chunk(attention_output)
         outputs = (layer_output,) + outputs
 
         # if decoder, return the attn key/values as the last output
@@ -734,6 +730,7 @@ class BertPreTrainedModel(PreTrainedModel):
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
     def _init_weights(self, module):
+        return
         """ Initialize the weights """
         if isinstance(module, nn.Linear):
             # Slightly different from the TF version which uses truncated_normal for initialization
@@ -852,25 +849,25 @@ BERT_INPUTS_DOCSTRING = r"""
 """
 
 from torch.nn.utils.parametrizations import parametrize
+import torch.nn.functional as F
 
 
 class DynamicBias(nn.Module):
-    def __init__(self, mix_coe, bias, training_setup, n):
+    def __init__(self, bias, training_setup, n):
         super().__init__()
-        self.mix_coe = nn.Parameter(mix_coe)
-        self.softmax = nn.Softmax(dim=0)
         self.bias_dict = bias
-        self.backing_bias = nn.Parameter(self.bias_dict[training_setup][n])
+        self.backing_bias = self.bias_dict[training_setup][n]
         self.training_setup = training_setup
         self.n = n
 
-    def forward(self, X):
-        sm = self.softmax(self.mix_coe)
-        new_bias = self.backing_bias * sm[-1]
-        for c, w in zip(sm[:-1],
-                        [e[self.n] for i, e in self.bias_dict.items() if i is not self.training_setup]):
-            new_bias += c * w
-        return new_bias
+    def forward(self, backing_bias,coe,prev_bias):
+        sm = F.softmax(coe,dim=0)
+        cat_bias = torch.cat((prev_bias, backing_bias))
+        sm = torch.tile(sm[:,None],(1,cat_bias.shape[1]))
+        return torch.mean(sm * cat_bias,dim=0)
+
+    def right_inverse(self, Z):
+        return torch.stack([self.backing_bias]),torch.zeros([len(self.bias_dict)]).cuda(),torch.stack([e[self.n] for i, e in self.bias_dict.items() if i is not self.training_setup])
 
 
 @add_start_docstrings(
@@ -911,28 +908,25 @@ class BertFitModel(BertPreTrainedModel):
             self.parameterize_model(adapter_setup[0])
             pass
 
-    def parameterize_model(self,which):
+    def parameterize_model(self, which):
         mix_coe = dict()
+        self.mix_coe = mix_coe
         self.bias_modules = []
-        for n, p in self.get_bias().items():
-            mix_coe[n] = torch.zeros([len(self.bias_dict)])
-            mix_coe[n] = mix_coe[n].cuda()
-            mix_coe[n].requires_grad = True
-            pass
         for n, p in self.bias_dict[which].items():
             p.requires_grad = True
         module_dict = {k: v for k, v in self.named_modules()}
         for n, p in self.get_bias().items():
-            bm = DynamicBias(mix_coe[n], self.bias_dict, self.training_setup,
+            bm = DynamicBias( self.bias_dict, self.training_setup,
                              n)
             self.bias_modules.append((n[0:-5], 'bias', bm))
+            #bm.register_backward_hook(lambda x: print(x))
             parametrize.register_parametrization(module_dict[n[0:-5]], 'bias', bm
                                                  )
-
+        pass
 
     def deparameterize_model(self):
         module_dict = {k: v for k, v in self.named_modules()}
-        for mn,_,_ in self.bias_modules:
+        for mn, _, _ in self.bias_modules:
             parametrize.remove_parametrizations(module_dict[mn], 'bias')
 
     def _add_bias(self, name: str, d: dict):
@@ -990,13 +984,17 @@ class BertFitModel(BertPreTrainedModel):
     def get_adapter_list(self):
         if self.config.forward_mode == 'Mix':
             with torch.no_grad():
-                self.bias_dict[self.training_setup] = {mn+'.bias':bm.forward(None) for mn,_,bm in self.bias_modules}
+                module_dict = {k: v for k, v in self.named_modules()}
+                self.bias_dict[self.training_setup] = {mn + '.bias':module_dict[mn].bias  for mn, _, bm in
+                                                       self.bias_modules}
         else:
             self.bias_dict[self.training_setup] = self.get_detached_bias()
         final_list = {
             'original_bias': self.original_bias,
-            'bias_dict': self.bias_dict
+            'bias_dict': self.bias_dict,
         }
+        if self.mix_coe is not None:
+            final_list['mix_coe'] = self.mix_coe
         return final_list
 
     def setup_task_adapter(self, tid):
@@ -1030,7 +1028,7 @@ class BertFitModel(BertPreTrainedModel):
         self.original_bias = None
         self.bias_dict = {}
         self.config = config
-
+        self.mix_coe = None
         self.embeddings = BertEmbeddings(config)
         self.encoder = BertEncoder(config)
 

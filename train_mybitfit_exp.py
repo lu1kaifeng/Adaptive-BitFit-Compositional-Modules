@@ -1,7 +1,7 @@
 import shutil
 
 import torch
-from torch.optim import Adam
+from torch.optim import Adam, AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torch import nn
@@ -10,7 +10,7 @@ from ace2005_module.data_load import ACE2005Dataset, all_triggers, all_entities,
     idx2trigger, idx2argument
 from ace2005_module.model import Net
 from ace2005_module.utils import find_triggers, calc_metric
-from mytransformers import AdamW, WEIGHTS_NAME, get_constant_schedule_with_warmup
+from mytransformers import  WEIGHTS_NAME, get_constant_schedule_with_warmup
 import csv
 import random
 import numpy as np
@@ -232,8 +232,8 @@ def learnable_para_calculate(model, note, printname=False):
             if "ita" in name:
                 param_opt.append((name, param))
             # """
-    logger.info(note + " Number of learned parameter: %.2fM" % (learn_sum / 1e6))
-    logger.info(note + " Number of else parameter: %.2fM" % (else_sum / 1e6))
+    logger.info(note + " Number of unfrozen parameter: %.2fM" % (learn_sum / 1e6))
+    logger.info(note + " Number of frozen parameter: %.2fM" % (else_sum / 1e6))
     logger.info(note + " Ratio: {}".format(1.0 * (learn_sum + else_sum) / else_sum))
     return param_opt
 
@@ -348,14 +348,19 @@ def Mix(task_ids, model):
     else:
         param_optimizer = param_opt
 
-    # logger.info(param_optimizer)
+    #logger.info(param_optimizer)
     no_decay = ['bias', 'ln_1', 'ln_2', 'ln_f']
+    #no_decay = []
     optimizer_grouped_parameters = [
         {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
          'weight_decay': args.weight_decay},
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
-
+    optimizer_grouped_parameter_names = [
+        {'params': [n for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
+         'weight_decay': args.weight_decay},
+        {'params': [n for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+    ]
     logger.info("USE ARGS.ADAM_EPSILON NOW.....")
     # logger.info("USE ARGS.ADAM_EPSILON NOW.....")
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.z_train_lrs[task_ids[0]], weight_decay=args.l2)
@@ -417,7 +422,7 @@ def Mix(task_ids, model):
                 writer.add_scalar(tbx_title+'train',loss.item(),tot_n_steps)
             loss.backward()
 
-            optimizer.step(None)
+            optimizer.step()
             #### 训练精度评估 ####
             words_all.extend(words_2d)
             triggers_all.extend(triggers_2d)
@@ -526,154 +531,7 @@ def Mix(task_ids, model):
 
 # An extra phase to train newly added modules and reused modules on the new task only, not used
 def Fit(task_ids, model, current_fit_epoch=None):
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-
-    tasks = [args.tasks[task_id] for task_id in task_ids]
-
-    logger.info("start to Fit { task: %s, seq train type: %s }" % (tasks, args.seq_train_type))
-    model_dir = get_model_dir(tasks)
-
-    train_dataset = [swap_name(TASK_DICT[t]["train"], args.seq_distil, args.ref1) for t in tasks]
-    valid_dataset = [TASK_DICT[t]["test"] for t in tasks]
-
-    if args.load_model_for_stage:
-        model = load_model(model_dir)
-    else:
-        load_model(model_dir)
-
-    # Fit preparation
-    model.config.forward_mode = 'Fit'
-    model.config.testing = False
-    model.train_adapter(str(task_ids[0]))
-    # model.train_adapter_subname([str(task_ids[0])])
-    model.cuda()
-    if args.clear_model:
-        model = clear(model)
-    param_opt = learnable_para_calculate(model, "whole", True)
-
-    gen_token = get_gen_token(tasks[0])
-    TOKENIZER.add_tokens([gen_token])
-    TOKENIZER.save_pretrained(model_dir)
-    SPECIAL_TOKENS[tasks[0]] = gen_token
-    SPECIAL_TOKEN_IDS[tasks[0]] = TOKENIZER.convert_tokens_to_ids(gen_token)
-    logger.info('gen token = {} , gen token id = {}'.format(gen_token, SPECIAL_TOKEN_IDS[tasks[0]]))
-    MODEL_CONFIG.vocab_size = len(TOKENIZER)
-    MODEL_CONFIG.to_json_file(os.path.join(model_dir, CONFIG_NAME))
-    global TOKENS_WEIGHT
-    while 50260 + len(args.tasks) != TOKENS_WEIGHT.shape[0]:
-        TOKENS_WEIGHT = torch.cat((TOKENS_WEIGHT, torch.ones([1]).cuda()))
-        logger.info("Add one dim weight!")
-
-    if not args.fp32:  # again because resize_token_embeddings makes embedding layer fp32
-        model = FP16_Module(model)
-
-    logger.warning("In Fit, not using extra data now...")
-    # train_qadata = QADataset(train_dataset, "train", SPECIAL_TOKEN_IDS[tasks[0]], train_extra_data)
-    train_qadata = ACE2005Dataset(train_dataset, task_ids[0])
-    valid_qadata = ACE2005Dataset(valid_dataset, task_ids[0])
-
-    max_train_batch_size = args.z_max_batch_size
-    train_dataloader = create_dataloader(train_qadata, "train", max_train_batch_size)
-    valid_dataloader = create_dataloader(valid_qadata, "test")
-
-    n_train_epochs = args.fit_epoch
-    if current_fit_epoch is not None:
-        n_train_epochs = current_fit_epoch
-
-    n_train_optimization_steps = len(train_qadata) * n_train_epochs
-    logger.info('len of train dataset: {} , max train batch size {} , num of opt steps: {}'.format(
-        len(train_qadata), max_train_batch_size, n_train_optimization_steps))
-
-    if args.whole_optim:
-        param_optimizer = list(model.named_parameters())
-    else:
-        param_optimizer = param_opt
-
-    # logger.info(param_optimizer)
-    no_decay = ['bias', 'ln_1', 'ln_2', 'ln_f']
-    optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
-         'weight_decay': args.weight_decay},
-        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-    ]
-
-    logger.info("USE ARGS.ADAM_EPSILON NOW.....")
-    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-    scheduler = get_constant_schedule_with_warmup(optimizer, args.z_warmup_step)
-    train_loss_fct = CrossEntropyLoss(ignore_index=FILL_VAL,
-                                      weight=TOKENS_WEIGHT.type(torch.float if args.fp32 else torch.half))
-
-    tot_n_steps = 0
-    train_once = TrainStep(model, optimizer, scheduler)
-
-    # model.config.batch_task_id = task_ids[0]
-    for ep in range(n_train_epochs):
-        model.train()
-        cum_loss, cum_qa_loss, cum_lm_loss, cur_n_inputs = 0, 0, 0, 0
-        # learnable_para_calculate(model, "whole")
-        for n_steps, (_, _, cqa, _, Y, gen_X, gen_Y, task_id, idx) in enumerate(train_dataloader):
-            # logger.info("One step!!!")
-            n_inputs = cqa[0].shape[0]
-            lens = cqa[0].shape[1]
-            if lens > 500:
-                logger.info(cqa[0].shape)
-                continue
-
-            model.config.batch_task_id = task_id[0][0].item()
-            losses = get_losses(model, cqa[0].cuda(), Y[0].cuda(), gen_X[0].cuda(), gen_Y[0].cuda(), train_loss_fct)
-
-            if losses[1].item() == 0:
-                loss = losses[0]
-            else:
-                loss = losses[0] + losses[1]
-
-            train_once(loss, n_inputs)
-
-            qa_loss = losses[0].item() * n_inputs
-            lm_loss = losses[1].item() * n_inputs
-            cum_loss += (qa_loss + lm_loss)
-            cum_qa_loss += qa_loss
-            cum_lm_loss += lm_loss
-            cur_n_inputs += n_inputs
-
-            if args.constant_sch or task_ids[0] > 0:
-                lr = scheduler.get_lr()[0]
-            else:
-                lr = scheduler.get_lr()
-
-            if (n_steps + 1) % args.logging_steps == 0:
-                logger.info(
-                    'progress {:.3f} , lr {:.1E} , loss {:.3f} , qa loss {:.3f} , lm loss {:.3f}, avg batch size {:.1f}'
-                    .format(ep + cur_n_inputs / len(train_qadata),
-                            lr, cum_loss / cur_n_inputs,
-                            cum_qa_loss / cur_n_inputs, cum_lm_loss / cur_n_inputs,
-                            cur_n_inputs / (n_steps + 1)))
-
-        if not args.gradient_debug:
-            tot_n_steps += (n_steps + 1)
-            val_loss, val_qa_loss, val_lm_loss = validation(model, valid_dataloader, train_loss_fct)
-            logger.info(
-                'epoch {}/{} done , tot steps {} , loss {:.2f} , qa loss {:.2f} , lm loss {:.2f}, val loss {:.2f}, vqa loss {:.2f}, vlm loss {:.2f}, avg batch size {:.1f}'.format(
-                    ep + 1, n_train_epochs, tot_n_steps,
-                    cum_loss / cur_n_inputs, cum_qa_loss / cur_n_inputs,
-                    cum_lm_loss / cur_n_inputs, val_loss,
-                    val_qa_loss, val_lm_loss, cur_n_inputs / (n_steps + 1)
-                ))
-
-        print_para(model)
-
-    torch.save(model.state_dict(), os.path.join(model_dir, SAVE_NAME + "finish"))
-    adapter_list = model.get_adapter_list()
-    np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
-    logger.info("MODEL SAVED!")
-
-    del optimizer
-    del scheduler
-    torch.cuda.empty_cache()
-
-    return model
+    pass
 
 
 # Training stage
