@@ -867,7 +867,8 @@ class DynamicBias(nn.Module):
         return torch.mean(sm * cat_bias,dim=0)
 
     def right_inverse(self, Z):
-        return torch.stack([self.backing_bias]),torch.zeros([len(self.bias_dict)]).cuda(),torch.stack([e[self.n] for i, e in self.bias_dict.items() if i is not self.training_setup])
+        prev = torch.stack([e[self.n] for i, e in self.bias_dict.items() if i is not self.training_setup])
+        return torch.zeros(torch.stack([self.backing_bias]).shape),torch.zeros([len(self.bias_dict)]).cuda(),prev
 
 
 @add_start_docstrings(
@@ -922,6 +923,8 @@ class BertFitModel(BertPreTrainedModel):
             #bm.register_backward_hook(lambda x: print(x))
             parametrize.register_parametrization(module_dict[n[0:-5]], 'bias', bm
                                                  )
+            module_dict[n[0:-5]].parametrizations.bias.original2.requires_grad = False
+            pass
         pass
 
     def deparameterize_model(self):
@@ -994,7 +997,8 @@ class BertFitModel(BertPreTrainedModel):
             'bias_dict': self.bias_dict,
         }
         if self.mix_coe is not None:
-            final_list['mix_coe'] = self.mix_coe
+            final_list['mix_coe'] = {mn + '.bias':module_dict[mn].parametrizations.bias.original1  for mn, _, bm in
+                                     self.bias_modules}
         return final_list
 
     def setup_task_adapter(self, tid):
