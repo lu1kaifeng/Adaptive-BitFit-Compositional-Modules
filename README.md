@@ -4,7 +4,14 @@ A paper I am working on
 ![Model Architecture](./arch.png)
 
 Continual event extraction is of practical utility in natural language processing. In the real world, it is common to encounter novel event types or data sources, on which the model needs to quickly adapt without forgetting knowledge of old tasks. Existing work on continual event extraction either always reuses existing parameters to learn new tasks, or blindly adds new parameters for every new task, incurring significant computational cost while preventing potential share of knowledge between tasks. To get the best of both worlds, in this work, we propose continual joint event extraction with adaptive bias mixing to adapt model for incoming tasks in a parameter efficient manner. We also incorporate metric learning to construct a prototypical network for maximum parameter efficiency. Experiment results on ACE2005 dataset show that our framework retains baseline performance with significantly smaller parameter size.
-
+#### Visualization of mixed bias composition
+<p float="left">
+<img  width="33%"  src="https://github.com/lu1kaifeng/Adaptive-BitFit-Compositional-Modules/blob/main/vis/bn.png">
+<img  width="33%"  src="https://github.com/lu1kaifeng/Adaptive-BitFit-Compositional-Modules/blob/main/vis/cts.png">
+<img  width="33%"  src="https://github.com/lu1kaifeng/Adaptive-BitFit-Compositional-Modules/blob/main/vis/nw.png">
+<img  width="33%"  src="https://github.com/lu1kaifeng/Adaptive-BitFit-Compositional-Modules/blob/main/vis/un.png">
+<img  width="33%"  src="https://github.com/lu1kaifeng/Adaptive-BitFit-Compositional-Modules/blob/main/vis/wl.png">
+    </p>
 
 #### Data
 
