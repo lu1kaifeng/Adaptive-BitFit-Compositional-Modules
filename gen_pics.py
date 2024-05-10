@@ -7,7 +7,7 @@ from matplotlib.pyplot import pcolormesh
 
 coe_list = []
 for n in ['bn','cts','nw','un','wl']:
-    adapter_list = np.load(os.path.join('model_bitfit//bert//bert//lll//1_bc_bn_cts_nw_un_wl_0.05_42//'+n, "adapter_list.npy"), allow_pickle=True)
+    adapter_list = np.load(os.path.join('D:\\activations\\affine\\'+n, "adapter_list.npy"), allow_pickle=True)
     adapter_list = adapter_list.item()['mix_coe']
     adapter_list = list(map(lambda x:(x[0],F.softmax(x[1]).detach().cpu()),list(adapter_list.items())))
 
@@ -33,22 +33,23 @@ cl_list = []
 titles = ['bn','cts','nw','un','wl']
 i=0
 for i,c in enumerate(coe_list):
+    pyplot.clf()
     cl = np.squeeze(coe_list[i][:,:,i+1])
     cl_list.append(cl)
     from matplotlib import colors
 
     divnorm = colors.TwoSlopeNorm(vmin=0.8/(i+2), vcenter=1/(i+2), vmax = 1.5/(i+2))
-    pcolormesh(cl, cmap="coolwarm", norm=divnorm)
+    pcolormesh(cl, cmap="binary", norm=divnorm)
 
     # tell imshow about color map so that only set colors are used
     #img = pyplot.imshow(cl, interpolation='nearest',origin='lower')
 
     # make a color bar
     #pyplot.clim(0, 1/(i+2))
-    pyplot.title(titles[i])
+    #pyplot.title(titles[i])
     i=i+1
     pyplot.colorbar()
     pyplot.xticks(np.arange(8),['query', 'key', 'value', 'output.dense', 'output.LayerNorm', 'intermediate.dense', 'output.dense', 'output.LayerNorm']
                   ,rotation=30)
     pyplot.subplots_adjust(bottom=0.25)
-    pyplot.show()
+    pyplot.savefig('affine_vis/'+titles[i-1]+'.png')

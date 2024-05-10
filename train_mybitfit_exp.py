@@ -35,7 +35,7 @@ random.seed(args.seed)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 
-def validation(model, iterator, fname='eval'):
+def validation(model, iterator, fname='eval',return_logits = False):
     model.eval()
     cum_loss =0
     argument_count = 1
@@ -43,12 +43,18 @@ def validation(model, iterator, fname='eval'):
     cum_argument_loss=0
     cum_trigger_loss = 0
     words_all, triggers_all, triggers_hat_all, arguments_all, arguments_hat_all = [], [], [], [], []
-
+    logits_list = [[],[]]
     with torch.no_grad():
         for i, batch in enumerate(iterator):
             tokens_x_2d, entities_x_3d, postags_x_2d, triggers_y_2d, arguments_2d, seqlens_1d, head_indexes_2d, words_2d, triggers_2d, adjm, task_id = batch
-
-            trigger_loss, triggers_y_2d, trigger_hat_2d, argument_hidden, argument_keys = model.predict_triggers(tokens_x_2d=tokens_x_2d, entities_x_3d=entities_x_3d,
+            if return_logits:
+                trigger_loss, triggers_y_2d, trigger_hat_2d, argument_hidden, argument_keys ,trigger_logits= model.predict_triggers(
+                    tokens_x_2d=tokens_x_2d, entities_x_3d=entities_x_3d,
+                    postags_x_2d=postags_x_2d, head_indexes_2d=head_indexes_2d,
+                    triggers_y_2d=triggers_y_2d, arguments_2d=arguments_2d,return_logits=True)
+                logits_list[0].append((trigger_loss, triggers_y_2d, trigger_hat_2d, argument_hidden, argument_keys ,trigger_logits))
+            else:
+                trigger_loss, triggers_y_2d, trigger_hat_2d, argument_hidden, argument_keys = model.predict_triggers(tokens_x_2d=tokens_x_2d, entities_x_3d=entities_x_3d,
                                                                                                                           postags_x_2d=postags_x_2d, head_indexes_2d=head_indexes_2d,
                                                                                                                           triggers_y_2d=triggers_y_2d, arguments_2d=arguments_2d)
 
@@ -58,7 +64,12 @@ def validation(model, iterator, fname='eval'):
             arguments_all.extend(arguments_2d)
 
             if len(argument_keys) > 0:
-                argument_loss, arguments_y_2d, argument_hat_1d, argument_hat_2d = model.predict_arguments(argument_hidden, argument_keys, arguments_2d)
+                if return_logits:
+                    argument_loss, arguments_y_2d, argument_hat_1d, argument_hat_2d,argument_logits = model.predict_arguments(
+                        argument_hidden, argument_keys, arguments_2d,return_logits=True)
+                    logits_list[1].append((argument_loss, arguments_y_2d, argument_hat_1d, argument_hat_2d,argument_logits))
+                else:
+                    argument_loss, arguments_y_2d, argument_hat_1d, argument_hat_2d = model.predict_arguments(argument_hidden, argument_keys, arguments_2d)
                 arguments_hat_all.extend(argument_hat_2d)
                 cum_trigger_loss+=trigger_loss
                 cum_loss += trigger_loss + args.LOSS_alpha * argument_loss
@@ -163,7 +174,10 @@ def validation(model, iterator, fname='eval'):
         fout.write(metric)'''
     writer.add_text(fname,metric)
     os.remove("temp")
-    return cum_loss / len(iterator),cum_argument_loss/ argument_count,cum_trigger_loss/ trigger_count,trigger_f1, argument_f1
+    if return_logits:
+        return cum_loss / len(iterator),cum_argument_loss/ argument_count,cum_trigger_loss/ trigger_count,trigger_f1, argument_f1,logits_list
+    else:
+        return cum_loss / len(iterator),cum_argument_loss/ argument_count,cum_trigger_loss/ trigger_count,trigger_f1, argument_f1
 
 
 
@@ -273,16 +287,20 @@ def load_model(model_dir, return_adapter_list=False):
     from mytransformers.models.bertfit.modeling_bert import BertFitModel as BertModel, BertConfig
 
     #model_config = BertConfig.from_json_file(os.path.join(model_dir, "config.json"))
-    model_config = BertConfig.from_json_file("./bert-large-uncased/config.json")
+    model_config = BertConfig.from_pretrained("bert-large-uncased")
     model = BertModel(model_config)
 
     adapter_list = np.load(os.path.join(model_dir, "adapter_list.npy"), allow_pickle=True)
     model.add_adapter_by_list(adapter_list, config=args.adapt_type)
     state_dict = torch.load(os.path.join(model_dir, "model-finish"), map_location='cuda:0')
+    trigger_dict = torch.load(os.path.join(model_dir, "fc_trigger"), map_location='cuda:0')
+    argument_dict = torch.load(os.path.join(model_dir, "fc_argument"), map_location='cuda:0')
     net = Net(trigger_size=len(all_triggers), PreModel=model, entity_size=len(all_entities),
               all_postags=len(all_postags),
               argument_size=len(all_arguments), device=args.device_ids[0], idx2trigger=idx2trigger)
     m, n = net.load_state_dict(state_dict, strict=False)
+    net.fc_trigger.load_state_dict(trigger_dict, strict=False)
+    net.fc_argument.load_state_dict(argument_dict,strict=False)
     logger.info("Missing : {}, Unexpected: {}".format(m, n))
     net.cuda()
 
@@ -316,6 +334,8 @@ def Mix(task_ids, model):
     if args.pretrain_adapter:
         load_pre_adapter(model, str(task_ids[0]))
     model.PreModel.train_adapter(names_to_train)
+    #model.fc_trigger.weight.requires_grad = False
+    #model.fc_argument.weight.requires_grad = False
     model.cuda()
 
     if args.clear_model:
@@ -394,6 +414,8 @@ def Mix(task_ids, model):
                 tokens_x_2d=tokens_x_2d, entities_x_3d=entities_x_3d,
                 postags_x_2d=postags_x_2d, head_indexes_2d=head_indexes_2d,
                 triggers_y_2d=triggers_y_2d, arguments_2d=arguments_2d)
+            #lasso = 0.1*model.regularize_mixing()
+            #trigger_loss+=lasso
             if len(argument_keys) > 0:
                 argument_loss, arguments_y_2d, argument_hat_1d, argument_hat_2d = model.predict_arguments(
                     argument_hidden, argument_keys, arguments_2d)
@@ -485,7 +507,8 @@ def Mix(task_ids, model):
                     cum_loss = 0
                 pass
         if not args.gradient_debug:
-            new_val_loss,_,__,trigger_f1,argument_f1 = validation(model, valid_dataloader,fname=tbx_title + 'val_text')
+            new_val_loss,_,__,trigger_f1,argument_f1,logits = validation(model, valid_dataloader,fname=tbx_title + 'val_text',return_logits = True)
+            torch.save(logits, os.path.join(model_dir, "logits"))
             if args.tbx:
                 writer.add_scalar(tbx_title + 'val', new_val_loss, tot_n_steps)
                 writer.add_scalars(tbx_title + 'val_metrics', {'trigger_f1': trigger_f1, 'argument_f1': argument_f1},tot_n_steps)
@@ -503,6 +526,10 @@ def Mix(task_ids, model):
                 torch.save(model.state_dict(), os.path.join(model_dir, SAVE_NAME + "finish"))
                 adapter_list = model.PreModel.get_adapter_list()
                 np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
+                np.save(os.path.join(model_dir, "vis.npy"), model.vis_data())
+
+                torch.save(model.fc_trigger.state_dict(),os.path.join(model_dir, "fc_trigger"))
+                torch.save(model.fc_argument.state_dict(), os.path.join(model_dir, "fc_argument"))
                 logger.info("BEST MODEL SAVED!")
             if early_stopping.early_stop:
                 break
@@ -868,7 +895,8 @@ def Transfer(task_ids, model, fit_bonus=0):
                 pass
 
         if not args.gradient_debug:
-            new_val_loss,new_argument_loss,new_trigger_loss,trigger_f1,argument_f1  = validation(net, valid_dataloader,fname=tbx_title+'val_text')
+            new_val_loss,new_argument_loss,new_trigger_loss,trigger_f1,argument_f1,logits  = validation(net, valid_dataloader,fname=tbx_title+'val_text',return_logits=True)
+            torch.save(logits, os.path.join(model_dir, "logits"))
             if args.tbx:
                 writer.add_scalars(tbx_title+'val', {'argument':new_argument_loss,'trigger':new_trigger_loss},tot_n_steps)
                 writer.add_scalars(tbx_title+'val_metrics',{'trigger_f1':trigger_f1,'argument_f1':argument_f1},tot_n_steps)
@@ -886,6 +914,8 @@ def Transfer(task_ids, model, fit_bonus=0):
                 torch.save(net.state_dict(), os.path.join(model_dir, SAVE_NAME + "finish"))
                 adapter_list = model.get_adapter_list()
                 np.save(os.path.join(model_dir, "adapter_list.npy"), adapter_list)
+                torch.save(net.fc_trigger.state_dict(),os.path.join(model_dir, "fc_trigger"))
+                torch.save(net.fc_argument.state_dict(), os.path.join(model_dir, "fc_argument"))
                 logger.info("BEST MODEL SAVED!")
             if early_stopping.early_stop:
                 break
@@ -893,6 +923,11 @@ def Transfer(task_ids, model, fit_bonus=0):
         print_para(model)
         if args.gradient_debug and task_ids[0] > 0:
             exit(0)
+    new_val_loss, new_argument_loss, new_trigger_loss, trigger_f1, argument_f1, penis_logits = validation(net,
+                                                                                                    train_dataloader,
+                                                                                                    fname=tbx_title + 'val_text',
+                                                                                                    return_logits=True)
+    torch.save(penis_logits, os.path.join(model_dir, "penis_logits"))
     model = load_model(model_dir)
 
 

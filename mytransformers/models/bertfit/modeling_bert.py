@@ -871,6 +871,38 @@ class DynamicBias(nn.Module):
         return torch.stack([self.backing_bias]),torch.zeros([len(self.bias_dict)]).cuda(),prev
 
 
+class DynamicBiasLinear(nn.Module):
+    def __init__(self, bias, training_setup, n):
+        super().__init__()
+        self.bias_dict = bias
+        self.backing_bias = self.bias_dict[training_setup][n]
+        self.training_setup = training_setup
+        self.n = n
+
+    def forward(self, backing_bias,coe,prev_bias):
+        return torch.mean(torch.cat((prev_bias, backing_bias))*F.softmax(coe,dim=0),dim=0)
+
+    def right_inverse(self, Z):
+        prev = torch.stack([e[self.n] for i, e in self.bias_dict.items() if i is not self.training_setup])
+        return torch.stack([self.backing_bias]),torch.zeros([len(self.bias_dict ),self.backing_bias.shape[0]]).cuda(),prev
+
+
+class DynamicBiasHybrid(nn.Module):
+    def __init__(self, bias, training_setup, n):
+        super().__init__()
+        self.bias_dict = bias
+        self.backing_bias = self.bias_dict[training_setup][n]
+        self.training_setup = training_setup
+        self.n = n
+
+    def forward(self, backing_bias,coe,prev_bias):
+        return torch.mean(torch.cat((prev_bias, backing_bias))*F.softmax(coe[:,1:]*100 +torch.tile(coe[:,0],(backing_bias.shape[1],1)).permute(1,0),dim=0),dim=0)
+
+    def right_inverse(self, Z):
+        prev = torch.stack([e[self.n] for i, e in self.bias_dict.items() if i is not self.training_setup])
+        return torch.stack([self.backing_bias]),torch.zeros([len(self.bias_dict ),self.backing_bias.shape[0]+1]).cuda(),prev
+
+
 @add_start_docstrings(
     "The bare Bert Model transformer outputting raw hidden-states without any specific head on top.",
     BERT_START_DOCSTRING,
@@ -917,7 +949,7 @@ class BertFitModel(BertPreTrainedModel):
             p.requires_grad = True
         module_dict = {k: v for k, v in self.named_modules()}
         for n, p in self.get_bias().items():
-            bm = DynamicBias( self.bias_dict, self.training_setup,
+            bm = DynamicBiasLinear( self.bias_dict, self.training_setup,
                              n)
             self.bias_modules.append((n[0:-5], 'bias', bm))
             #bm.register_backward_hook(lambda x: print(x))
